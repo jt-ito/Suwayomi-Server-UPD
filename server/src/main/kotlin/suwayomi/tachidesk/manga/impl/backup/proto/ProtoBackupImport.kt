@@ -34,6 +34,8 @@ import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupMangaHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupSettingsHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupSourceHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.models.Backup
+import suwayomi.tachidesk.manga.impl.extension.Extension
+import suwayomi.tachidesk.manga.impl.extension.ExtensionsList
 import suwayomi.tachidesk.manga.model.table.CategoryTable
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
@@ -216,13 +218,39 @@ object ProtoBackupImport : ProtoBackupBase() {
         return parser.decodeFromByteArray(Backup.serializer(), bytes)
     }
 
-    private fun performRestore(
+    // installs the extensions providing any source the backup references but that isn't installed, so the user
+    // doesn't have to manually reinstall every extension after a restore - matched by sourceId against the
+    // extension repo index, so a source only gets auto-installed if some configured repo still offers it
+    private suspend fun installMissingExtensions(missingSourceIds: List<Pair<Long, String>>) {
+        if (missingSourceIds.isEmpty()) {
+            return
+        }
+
+        val extensionBySourceId = ExtensionsList.getExtensionBySourceId()
+        val pkgNamesToInstall =
+            missingSourceIds
+                .mapNotNull { (sourceId, _) -> extensionBySourceId[sourceId]?.pkgName }
+                .distinct()
+
+        pkgNamesToInstall.forEach { pkgName ->
+            try {
+                Extension.installExtension(pkgName)
+                logger.info { "restore: auto-installed extension \"$pkgName\"" }
+            } catch (e: Exception) {
+                logger.error(e) { "restore: failed to auto-install extension \"$pkgName\"" }
+            }
+        }
+    }
+
+    private suspend fun performRestore(
         id: String,
         backup: Backup,
         flags: BackupFlags,
         syncMode: SyncRestoreMode,
     ): ValidationResult {
         val validationResult = validate(backup)
+
+        installMissingExtensions(validationResult.missingSourceIds)
 
         val restoreCategories = if (flags.includeCategories) 1 else 0
         val restoreMeta = if (flags.includeClientData) 1 else 0

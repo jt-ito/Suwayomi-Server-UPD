@@ -35,7 +35,12 @@ object ExtensionsList {
     var lastUpdateCheck: Long = 0
     var updateMap = ConcurrentHashMap<String, ExtensionInfo>()
 
-    suspend fun fetchExtensions() {
+    // the last extension list fetched from the configured repos, sources included - kept around so a source can be
+    // matched back to the extension providing it (e.g. to auto-install missing extensions on backup restore)
+    @Volatile
+    private var lastFetchedExtensions: List<ExtensionInfo> = emptyList()
+
+    suspend fun fetchExtensions(): List<ExtensionInfo> {
         val allExtensions = mutableListOf<ExtensionInfo>()
 
         ExtensionStoreService.getAndRefresh().forEach { store ->
@@ -50,24 +55,30 @@ object ExtensionsList {
         }
 
         updateExtensionDatabase(allExtensions)
+        lastFetchedExtensions = allExtensions
+        return allExtensions
     }
 
-    suspend fun fetchExtensionsCached() {
+    suspend fun fetchExtensionsCached(): List<ExtensionInfo> {
         // update if 60 seconds has passed or requested offline and database is empty
         if (lastUpdateCheck + 60.seconds.inWholeMilliseconds < System.currentTimeMillis()) {
             logger.debug { "Getting extensions list from the internet" }
             lastUpdateCheck = System.currentTimeMillis()
 
-            fetchExtensions()
-        } else {
-            logger.debug { "used cached extension list" }
+            return fetchExtensions()
         }
+        logger.debug { "used cached extension list" }
+        return lastFetchedExtensions
     }
 
     suspend fun getExtensionList(): List<ExtensionDataClass> {
         fetchExtensionsCached()
         return extensionTableAsDataClass()
     }
+
+    // sourceId -> the extension (across all configured repos) that provides it, for extensions not installed yet
+    suspend fun getExtensionBySourceId(): Map<Long, ExtensionInfo> =
+        fetchExtensionsCached().flatMap { extension -> extension.sources.map { it.id to extension } }.toMap()
 
     fun extensionTableAsDataClass() =
         transaction {
