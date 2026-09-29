@@ -1,0 +1,2447 @@
+/* ============================================================
+ * Suwayomi Server — WebUI Modern Aesthetic Overhaul
+ * Implements Emil Kowalski tactile interactions, modern border radii,
+ * anti-slop typography, and refined header/sidebar ergonomics.
+ * ============================================================ */
+
+/* --- Core Font Smoothing & Antialiasing --- */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* --- Subtle Neutral Scrollbar --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 128, 128, 0.35) !important;
+  border-radius: 9999px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+  transition: background-color 150ms ease !important;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 128, 128, 0.55) !important;
+}
+
+/* --- Global Button Styling --- */
+/* Modern 8px radius for all MUI buttons */
+.MuiButton-root,
+button.MuiButtonBase-root:not(.MuiIconButton-root):not(.MuiTab-root):not(.MuiBottomNavigationAction-root):not(.MuiListItemButton-root) {
+  border-radius: 8px !important;
+  text-transform: none !important;
+  font-weight: 550 !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: none !important;
+  transition: background-color 160ms ease,
+              border-color 160ms ease,
+              color 160ms ease,
+              transform 100ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 160ms ease !important;
+}
+
+/* Tactile Active States (Emil Kowalski Philosophy) */
+.MuiButton-root:active,
+button.MuiButtonBase-root:not(.MuiTab-root):not(.MuiBottomNavigationAction-root):active {
+  transform: scale(0.97) !important;
+}
+
+.MuiIconButton-root:active {
+  transform: scale(0.92) !important;
+}
+
+/* Contained Buttons */
+.MuiButton-contained {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+
+.MuiButton-contained:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Outlined Buttons */
+.MuiButton-outlined {
+  border-width: 1.5px !important;
+}
+
+/* Icon Buttons: Soft Rounded Surfaces */
+.MuiIconButton-root {
+  border-radius: 8px !important;
+  transition: background-color 150ms ease,
+              color 150ms ease,
+              transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+/* Floating Action Button (FAB) */
+.MuiFab-root {
+  border-radius: 14px !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.3) !important;
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms ease !important;
+}
+
+.MuiFab-root:active {
+  transform: scale(0.94) !important;
+}
+
+/* --- Chips & Category Badges --- */
+.MuiChip-root {
+  border-radius: 9999px !important;
+  font-weight: 500 !important;
+  font-size: 0.8125rem !important;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.MuiChip-root:active {
+  transform: scale(0.96) !important;
+}
+
+/* --- Tabs Styling --- */
+.MuiTabs-root {
+  min-height: 44px !important;
+}
+
+.MuiTab-root {
+  text-transform: none !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  letter-spacing: -0.01em !important;
+  min-height: 44px !important;
+  padding: 8px 16px !important;
+  border-radius: 8px 8px 0 0 !important;
+  transition: color 150ms ease, background-color 150ms ease !important;
+}
+
+/* --- Sidebar Drawer Width & Navigation Styling --- */
+:root {
+  --suwayomi-sidebar-expanded-width: 230px;
+  --suwayomi-sidebar-collapsed-width: 68px;
+}
+
+/* Sidebar Drawer (Docked / Left only) */
+.MuiDrawer-docked .MuiDrawer-paper,
+.MuiDrawer-paperAnchorLeft {
+  background-image: none !important;
+  border-right: 1px solid color-mix(in srgb, currentColor 8%, transparent) !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.MuiDrawer-docked {
+  overflow-x: hidden !important;
+}
+
+.MuiDrawer-docked .MuiDrawer-paper::-webkit-scrollbar-horizontal,
+.MuiDrawer-docked .MuiDrawer-paper *::-webkit-scrollbar-horizontal {
+  display: none !important;
+  height: 0 !important;
+}
+
+.MuiDrawer-docked .MuiDrawer-paper .MuiList-root {
+  overflow-x: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.MuiDrawer-docked .MuiDrawer-paper .MuiListItemText-root,
+.MuiDrawer-docked .MuiDrawer-paper .MuiListItemText-root .MuiTypography-root {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+
+/* Expanded state: full comfortable width */
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked {
+  width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+}
+
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked .MuiDrawer-paper,
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-paperAnchorLeft {
+  width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  min-width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  max-width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  overflow-x: hidden !important;
+}
+
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked .MuiDrawer-paper > .MuiBox-root,
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-paperAnchorLeft > .MuiBox-root {
+  width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  min-width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  max-width: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+  overflow-x: hidden !important;
+}
+
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked .MuiDrawer-paper .MuiListItemButton-root,
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-paperAnchorLeft .MuiListItemButton-root {
+  border-radius: 8px !important;
+  margin: 2px 6px !important;
+  padding: 8px 10px !important;
+  width: calc(100% - 12px) !important;
+  box-sizing: border-box !important;
+  transition: background-color 150ms ease, transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked .MuiDrawer-paper .MuiListItemButton-root:active,
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-paperAnchorLeft .MuiListItemButton-root:active {
+  transform: scale(0.98) !important;
+}
+
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-docked .MuiDrawer-paper .MuiListItemIcon-root,
+body:not(.suwayomi-drawer-collapsed) .MuiDrawer-paperAnchorLeft .MuiListItemIcon-root {
+  min-width: 34px !important;
+}
+
+/* Collapsed state: clean mini sidebar (icons only, centered) */
+body.suwayomi-drawer-collapsed .MuiDrawer-docked,
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft {
+  width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  min-width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  max-width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  overflow-x: hidden !important;
+}
+
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper > .MuiBox-root,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft > .MuiBox-root {
+  width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  min-width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  max-width: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+  overflow-x: hidden !important;
+}
+
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper .MuiListItemButton-root,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft .MuiListItemButton-root {
+  margin: 4px 8px !important;
+  padding: 10px 0 !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  width: calc(100% - 16px) !important;
+  transition: background-color 150ms ease, transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper .MuiListItemButton-root:active,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft .MuiListItemButton-root:active {
+  transform: scale(0.96) !important;
+}
+
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper .MuiListItemIcon-root,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft .MuiListItemIcon-root {
+  min-width: unset !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+body.suwayomi-drawer-collapsed .MuiDrawer-docked .MuiDrawer-paper .MuiListItemText-root,
+body.suwayomi-drawer-collapsed .MuiDrawer-paperAnchorLeft .MuiListItemText-root {
+  display: none !important;
+}
+
+/* --- Bottom Options Panel / Manga Filter Drawer Overhaul --- */
+.MuiDrawer-root.MuiDrawer-anchorBottom .MuiBackdrop-root,
+.MuiDrawer-anchorBottom .MuiBackdrop-root {
+  backdrop-filter: blur(2px) !important;
+  -webkit-backdrop-filter: blur(2px) !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.MuiDrawer-root.MuiDrawer-anchorBottom .MuiDrawer-paper,
+.MuiDrawer-anchorBottom .MuiDrawer-paper,
+.MuiDrawer-anchorBottom .MuiPaper-root {
+  width: 100% !important;
+  max-width: 540px !important;
+  min-width: 320px !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  border-top-left-radius: 22px !important;
+  border-top-right-radius: 22px !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-radius: 22px 22px 0 0 !important;
+  clip-path: inset(0 0 0 0 round 22px 22px 0 0) !important;
+  border-top: 1.5px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor)) 30%, transparent) !important;
+  border-left: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor)) 18%, transparent) !important;
+  border-right: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor)) 18%, transparent) !important;
+  border-bottom: none !important;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45), 0 -2px 10px color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, transparent)) 15%, transparent) !important;
+  background-color: var(--suwayomi-theme-surface, var(--suwayomi-theme-paper, var(--mui-palette-background-paper, #181b2a))) !important;
+  background-image: none !important;
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, #ffffff)) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper > .MuiBox-root,
+.MuiDrawer-anchorBottom .MuiDrawer-paper > .MuiStack-root {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: unset !important;
+  box-sizing: border-box !important;
+}
+
+/* Tabs inside bottom filter drawer */
+.MuiDrawer-anchorBottom .MuiTabs-root {
+  border-bottom: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, currentColor) 10%, transparent) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 90%, var(--suwayomi-theme-bg, #000) 10%) !important;
+  min-height: 48px !important;
+  width: 100% !important;
+  border-top-left-radius: 22px !important;
+  border-top-right-radius: 22px !important;
+  overflow: hidden !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTabs-scroller {
+  border-top-left-radius: 22px !important;
+  border-top-right-radius: 22px !important;
+  overflow: hidden !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTabs-flexContainer {
+  display: flex !important;
+  width: 100% !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTab-root {
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+  max-width: unset !important;
+  padding: 12px 14px !important;
+  font-weight: 600 !important;
+  font-size: 0.90rem !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  letter-spacing: -0.01em !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor)) 70%, transparent) !important;
+  transition: color 150ms ease, background-color 150ms ease !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTab-root:first-of-type {
+  border-top-left-radius: 22px !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTab-root:last-of-type {
+  border-top-right-radius: 22px !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTab-root:hover {
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor)) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-text, currentColor) 6%, transparent) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTab-root.Mui-selected {
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  font-weight: 700 !important;
+}
+
+.MuiDrawer-anchorBottom .MuiTabs-indicator {
+  background-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  height: 3px !important;
+  border-radius: 3px 3px 0 0 !important;
+}
+
+/* Tab Panels content */
+.MuiDrawer-anchorBottom [role="tabpanel"],
+.MuiDrawer-anchorBottom .MuiBox-root:has(> .MuiFormGroup-root),
+.MuiDrawer-anchorBottom .MuiBox-root:has(> .MuiFormControlLabel-root),
+.MuiDrawer-anchorBottom .MuiStack-root > div:not(.MuiTabs-root):not(.MuiCollapse-root) {
+  padding: 14px 20px 24px 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Collapsable filter headers (Status/Source/Genre) keep horizontal padding only */
+.MuiDrawer-anchorBottom .MuiStack-root > div.MuiStack-root:has(> .MuiFormLabel-root) {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 8px !important; /* upstream is 16px */
+}
+
+/* ...and so does the Reset/mode button group inside them (a div child, padded by the rule above) */
+.MuiDrawer-anchorBottom .MuiStack-root > div.MuiStack-root:has(> .MuiFormLabel-root) > div {
+  padding: 0 !important;
+}
+
+/* Options / Checkboxes / Radios inside Drawer */
+.MuiDrawer-anchorBottom .MuiFormControlLabel-root {
+  margin-left: -4px !important;
+  margin-right: 0 !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  transition: background-color 130ms ease !important;
+  user-select: none !important;
+}
+
+.MuiDrawer-anchorBottom .MuiFormControlLabel-root:hover {
+  background-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 10%, transparent) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiFormControlLabel-label {
+  font-weight: 500 !important;
+  font-size: 0.90rem !important;
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor)) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiCheckbox-root,
+.MuiDrawer-anchorBottom .MuiRadio-root {
+  color: color-mix(in srgb, var(--suwayomi-theme-text, currentColor) 55%, transparent) !important;
+  padding: 6px 8px !important;
+  transition: color 130ms ease !important;
+}
+
+.MuiDrawer-anchorBottom .MuiCheckbox-root.Mui-checked,
+.MuiDrawer-anchorBottom .MuiRadio-root.Mui-checked {
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiButtonGroup-root {
+  width: 100% !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.MuiDrawer-anchorBottom .MuiButtonGroup-root .MuiButton-root {
+  flex: 1 1 0 !important;
+  border-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor)) 25%, transparent) !important;
+  color: var(--suwayomi-theme-text, currentColor) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiButtonGroup-root .MuiButton-contained,
+.MuiDrawer-anchorBottom .MuiButtonGroup-root .MuiButton-root.Mui-selected {
+  background-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  color: var(--mui-palette-primary-contrastText, #ffffff) !important;
+}
+
+/* --- Sidebar Header Overhaul (Brand & Collapse) --- */
+.suwayomi-drawer-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  padding: 0 8px 0 10px !important;
+  min-height: 52px !important;
+  height: 52px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Brand badge in drawer header */
+.suwayomi-brand-badge-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: inherit;
+  user-select: none;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.suwayomi-brand-logo-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: block;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.suwayomi-brand-badge-container:hover .suwayomi-brand-logo-img {
+  transform: scale(1.1);
+}
+
+.suwayomi-brand-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.suwayomi-brand-name {
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mui-palette-text-primary, currentColor);
+  flex-shrink: 0;
+}
+
+.suwayomi-brand-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1.5px 5.5px;
+  border-radius: 4px;
+  background: rgba(53, 212, 213, 0.12);
+  color: #35d4d5;
+  border: 1px solid rgba(53, 212, 213, 0.3);
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
+/* Collapse Toggle Button in Header (Chevron Left Arrow) */
+.suwayomi-drawer-toggle-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  min-width: 32px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: transparent !important;
+  color: currentColor !important;
+  opacity: 0.8 !important;
+  cursor: pointer !important;
+  transition: background-color 150ms ease, opacity 150ms ease, transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.suwayomi-drawer-toggle-btn:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+  opacity: 1 !important;
+}
+
+.suwayomi-drawer-toggle-btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* Hide any native button React places in the header to avoid duplicates */
+.suwayomi-drawer-header button:not(.suwayomi-drawer-toggle-btn) {
+  display: none !important;
+}
+
+/* Collapsed Header State: EXACTLY AND ONLY THE LOGO DEAD CENTER */
+body.suwayomi-drawer-collapsed .suwayomi-drawer-header {
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-brand-badge-container {
+  margin: 0 auto !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  justify-content: center !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 10px !important;
+  gap: 0 !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-brand-badge-container:hover {
+  background-color: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-brand-logo-img {
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 auto !important;
+  display: block !important;
+  flex-shrink: 0 !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-brand-logo-img:hover {
+  transform: scale(1.14) !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-brand-text {
+  display: none !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-drawer-header button,
+body.suwayomi-drawer-collapsed .suwayomi-drawer-toggle-btn {
+  display: none !important;
+}
+
+/* AppBar positioning adjustments to follow drawer in exact lockstep */
+@media (min-width: 600px) {
+  body:not(.suwayomi-drawer-collapsed) .MuiAppBar-root {
+    margin-left: var(--suwayomi-sidebar-expanded-width, 230px) !important;
+    width: calc(100% - var(--suwayomi-sidebar-expanded-width, 230px)) !important;
+  }
+
+  body.suwayomi-drawer-collapsed .MuiAppBar-root {
+    margin-left: var(--suwayomi-sidebar-collapsed-width, 68px) !important;
+    width: calc(100% - var(--suwayomi-sidebar-collapsed-width, 68px)) !important;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .MuiAppBar-root {
+    margin-left: 0 !important;
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+
+.MuiAppBar-root button[aria-label="open drawer"] {
+  display: none !important;
+}
+
+/* Ensure the toolbar content (back arrow and title) sits smoothly on the left when collapsed */
+body.suwayomi-drawer-collapsed .MuiAppBar-root .MuiToolbar-root > div {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* --- Top AppBar Tightening & Dynamic Theme-Aware Styling --- */
+/* Eliminates MUI's dull grey elevation overlay and matches active theme */
+.MuiAppBar-root {
+  background-color: var(--suwayomi-theme-surface, var(--mui-palette-background-paper, var(--suwayomi-theme-bg, #181b2a))) !important;
+  background-image: none !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid var(--mui-palette-divider, color-mix(in srgb, var(--suwayomi-theme-text, currentColor) 10%, transparent)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor)) !important;
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease !important;
+}
+
+.MuiAppBar-root .MuiToolbar-root {
+  min-height: 52px !important;
+  height: 52px !important;
+  padding-left: 12px !important;
+  padding-right: 14px !important;
+}
+
+/* Scrolled state: increased elevation depth as content passes underneath */
+body.suwayomi-scrolled .MuiAppBar-root {
+  border-bottom: 1px solid var(--mui-palette-divider, color-mix(in srgb, currentColor 18%, transparent)) !important;
+  box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Hide redundant back arrow on top-level root pages */
+.suwayomi-hide-back-btn .MuiAppBar-root button[aria-label="menu"] {
+  display: none !important;
+}
+
+/* Page Title Typography in AppBar */
+.MuiAppBar-root h1.MuiTypography-root,
+.MuiAppBar-root [class*="MuiTypography-h"]:not(button *) {
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor)) !important;
+}
+
+/* --- Manga Card Grid & Items --- */
+.MuiCard-root {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 200ms cubic-bezier(0.2, 0, 0, 1),
+              border-color 200ms ease !important;
+}
+
+.MuiCard-root:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.3) !important;
+  z-index: 15 !important;
+}
+
+/* Ensure the hovered grid item elevates above sticky toolbars */
+.MuiGrid-item:hover,
+[class*="MuiGrid-item"]:hover,
+[class*="MuiGrid2-root"]:hover,
+div:has(> .MuiCard-root:hover) {
+  z-index: 15 !important;
+  position: relative !important;
+}
+
+/* Add to Library button in Source browse mode */
+.source-manga-library-state-button {
+  z-index: 25 !important;
+  position: relative !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
+}
+
+.source-manga-library-state-indicator {
+  z-index: 20 !important;
+  position: relative !important;
+  border-radius: 6px !important;
+}
+
+/* Source Browse Top Sticky Toolbar (Popular, Latest, Search) spacing */
+div[style*="position: sticky"] > div:has(> button),
+div[style*="position: sticky"] > div[style*="background-color"],
+div:has(> div > button[class*="MuiButton-contained"], > div > button[class*="MuiButton-outlined"]) {
+  margin-bottom: 14px !important;
+}
+
+/* Top padding for manga grid to ensure top row clears sticky bar */
+.MuiGrid-container:has(.MuiCard-root),
+div[class*="MuiBox-root"]:has(> div > .MuiGrid-container .MuiCard-root) {
+  padding-top: 10px !important;
+}
+
+/* --- Form Fields & Inputs --- */
+.MuiOutlinedInput-root {
+  border-radius: 10px !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+}
+
+/* --- Search Input & Search Bars (Rounded Rectangle Outline) --- */
+.MuiAppBar-root .MuiTextField-root,
+.MuiToolbar-root .MuiTextField-root {
+  min-width: 220px;
+  max-width: 380px;
+}
+
+/* Rounded rectangle container with outline */
+.MuiAppBar-root .MuiInput-root,
+.MuiToolbar-root .MuiInput-root,
+.MuiAppBar-root .MuiInputBase-root,
+.MuiToolbar-root .MuiInputBase-root {
+  border-radius: 8px !important;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent) !important;
+  background-color: color-mix(in srgb, currentColor 5%, transparent) !important;
+  padding: 4px 8px 4px 12px !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove MUI's flat standard underline */
+.MuiAppBar-root .MuiInput-underline:before,
+.MuiAppBar-root .MuiInput-underline:after,
+.MuiToolbar-root .MuiInput-underline:before,
+.MuiToolbar-root .MuiInput-underline:after {
+  display: none !important;
+}
+
+/* Input text padding & indentation - prevents falling off the left edge */
+.MuiAppBar-root .MuiInputBase-input,
+.MuiToolbar-root .MuiInputBase-input {
+  padding: 4px 4px 4px 4px !important;
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+  color: inherit !important;
+}
+
+/* Focus state on search box */
+.MuiAppBar-root .MuiInput-root.Mui-focused,
+.MuiToolbar-root .MuiInput-root.Mui-focused,
+.MuiAppBar-root .MuiInput-root:focus-within,
+.MuiToolbar-root .MuiInput-root:focus-within,
+.MuiAppBar-root .MuiInputBase-root.Mui-focused,
+.MuiToolbar-root .MuiInputBase-root.Mui-focused {
+  border-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #35d4d5)) !important;
+  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #35d4d5)) 25%, transparent) !important;
+}
+
+/* Hover state */
+.MuiAppBar-root .MuiInput-root:hover:not(.Mui-focused),
+.MuiToolbar-root .MuiInput-root:hover:not(.Mui-focused) {
+  border-color: color-mix(in srgb, currentColor 30%, transparent) !important;
+}
+
+/* Cancel / Clear icon button inside search box */
+.MuiAppBar-root .MuiInputAdornment-positionEnd .MuiIconButton-root,
+.MuiToolbar-root .MuiInputAdornment-positionEnd .MuiIconButton-root {
+  padding: 4px !important;
+  margin-right: -2px !important;
+}
+
+/* Search lens icon styling */
+.suwayomi-search-icon {
+  margin-right: 8px;
+  color: currentColor;
+  opacity: 0.65;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* --- Dialogs, Menus & Surfaces --- */
+.MuiDialog-paper {
+  border-radius: 16px !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent) !important;
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.MuiMenu-paper,
+.MuiPopover-paper {
+  border-radius: 12px !important;
+  background-image: none !important;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent) !important;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ==========================================================================
+   In-Page WebView Floating Window Modal
+   ========================================================================== */
+.suwayomi-webview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.suwayomi-webview-backdrop.suwayomi-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.suwayomi-webview-window {
+  position: relative;
+  width: min(1200px, 94vw);
+  height: min(850px, 88vh);
+  background-color: var(--suwayomi-webview-bg, var(--suwayomi-theme-bg, #0e0f14)) !important;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-webview-text, #fff) 12%, transparent) !important;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.75),
+              0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: scale(0.96) translateY(8px);
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1),
+              width 200ms cubic-bezier(0.2, 0, 0, 1),
+              height 200ms cubic-bezier(0.2, 0, 0, 1),
+              border-radius 200ms ease;
+}
+
+.suwayomi-webview-backdrop.suwayomi-open .suwayomi-webview-window {
+  transform: scale(1) translateY(0);
+}
+
+/* Maximized Window State */
+.suwayomi-webview-backdrop.suwayomi-maximized {
+  padding: 0;
+}
+
+.suwayomi-webview-backdrop.suwayomi-maximized .suwayomi-webview-window {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+/* Window Titlebar Header (Matches Active Theme) */
+.suwayomi-webview-window-bar {
+  height: 42px;
+  min-height: 42px;
+  background-color: var(--suwayomi-webview-surface, var(--suwayomi-theme-surface, #181b2a)) !important;
+  border-bottom: 1px solid var(--mui-palette-divider, color-mix(in srgb, var(--suwayomi-webview-text, #fff) 12%, transparent)) !important;
+  color: var(--suwayomi-webview-text, var(--mui-palette-text-primary, #f3f4f6)) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  user-select: none;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Traffic light controls */
+.suwayomi-webview-traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suwayomi-webview-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms ease, filter 120ms ease;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.suwayomi-webview-dot:hover {
+  transform: scale(1.15);
+  filter: brightness(1.15);
+}
+
+.suwayomi-webview-dot:active {
+  transform: scale(0.92);
+}
+
+.suwayomi-webview-dot-close {
+  background-color: #ff5f56;
+  border: 1px solid #e0443e;
+}
+
+.suwayomi-webview-dot-minimize {
+  background-color: #ffbd2e;
+  border: 1px solid #dea123;
+}
+
+.suwayomi-webview-dot-maximize {
+  background-color: #27c93f;
+  border: 1px solid #1aab29;
+}
+
+/* Window Title & Info in Bar */
+.suwayomi-webview-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.suwayomi-webview-title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: var(--suwayomi-webview-text, var(--mui-palette-text-primary, #ffffff)) !important;
+  letter-spacing: -0.01em;
+}
+
+.suwayomi-webview-title-badge svg {
+  color: var(--suwayomi-webview-accent, var(--mui-palette-primary-main, #35d4d5)) !important;
+}
+
+.suwayomi-webview-url-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.725rem;
+  color: color-mix(in srgb, var(--suwayomi-webview-text, #fff) 82%, transparent) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-webview-text, #fff) 8%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-webview-text, #fff) 14%, transparent) !important;
+  padding: 2px 8px;
+  border-radius: 6px;
+  max-width: 480px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Window Action Buttons (Right) */
+.suwayomi-webview-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.suwayomi-webview-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: color-mix(in srgb, var(--suwayomi-webview-text, #fff) 80%, transparent) !important;
+  cursor: pointer;
+  transition: all 120ms ease;
+  box-sizing: border-box;
+}
+
+.suwayomi-webview-btn:hover {
+  background-color: color-mix(in srgb, var(--suwayomi-webview-text, #fff) 12%, transparent) !important;
+  color: var(--suwayomi-webview-text, #ffffff) !important;
+}
+
+.suwayomi-webview-btn:active {
+  transform: scale(0.94);
+}
+
+.suwayomi-webview-btn-close:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Window Frame / Iframe */
+.suwayomi-webview-frame-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: var(--suwayomi-webview-bg, #0d0e14);
+}
+
+.suwayomi-webview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background-color: var(--suwayomi-webview-bg, #0f1015);
+}
+
+/* ============================================================
+ * Multi-User Profile Card & Account Management UI
+ * ============================================================ */
+
+.suwayomi-drawer-footer {
+  margin-top: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  border-top: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 10%, transparent) !important;
+  background: transparent !important;
+  flex-shrink: 0 !important;
+}
+
+.suwayomi-user-profile-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 14px !important;
+  width: 100% !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  text-align: left !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  transition: background 150ms ease, transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+  color: inherit !important;
+}
+
+.suwayomi-user-profile-card:hover {
+  background-color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 7%, transparent) !important;
+}
+
+.suwayomi-user-profile-card:active {
+  transform: scale(0.98) !important;
+}
+
+.suwayomi-user-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, var(--suwayomi-theme-accent, #5b74ef), color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 50%, #000)) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.02em !important;
+}
+
+.suwayomi-user-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+.suwayomi-user-name {
+  font-size: 0.86rem !important;
+  font-weight: 600 !important;
+  color: var(--suwayomi-theme-text, currentColor) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
+}
+
+.suwayomi-user-role-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.suwayomi-user-role-badge {
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 18%, transparent) !important;
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 30%, transparent) !important;
+  line-height: 1.15 !important;
+}
+
+.suwayomi-user-switch-icon {
+  opacity: 0.55 !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: opacity 150ms ease, transform 150ms ease !important;
+  flex-shrink: 0 !important;
+  color: var(--suwayomi-theme-text, currentColor) !important;
+}
+
+.suwayomi-user-profile-card:hover .suwayomi-user-switch-icon {
+  opacity: 1 !important;
+  transform: translateX(1.5px) !important;
+}
+
+/* Collapsed Drawer Behavior for User Profile */
+body.suwayomi-drawer-collapsed .suwayomi-drawer-footer {
+  width: 68px !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-user-profile-card {
+  justify-content: center !important;
+  padding: 10px 0 !important;
+  width: 68px !important;
+  margin: 0 auto !important;
+}
+
+body.suwayomi-drawer-collapsed .suwayomi-user-meta,
+body.suwayomi-drawer-collapsed .suwayomi-user-switch-icon {
+  display: none !important;
+}
+
+/* --- Multi-User Modal Dialog --- */
+.suwayomi-user-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 99999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 180ms ease !important;
+}
+
+.suwayomi-user-modal-overlay.suwayomi-open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.suwayomi-user-modal {
+  background-color: var(--suwayomi-theme-surface, #151720) !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 12%, transparent) !important;
+  border-radius: 14px !important;
+  width: 100% !important;
+  max-width: 460px !important;
+  max-height: 85vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  transform: scale(0.96) translateY(8px) !important;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  overflow: hidden !important;
+}
+
+.suwayomi-user-modal-overlay.suwayomi-open .suwayomi-user-modal {
+  transform: scale(1) translateY(0) !important;
+}
+
+.suwayomi-user-modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 18px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 10%, transparent) !important;
+}
+
+.suwayomi-user-modal-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.suwayomi-user-modal-badge {
+  font-size: 0.58rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 1px 5px !important;
+  border-radius: 4px !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 15%, transparent) !important;
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+
+.suwayomi-user-modal-close {
+  background: transparent !important;
+  border: none !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 60%, transparent) !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 120ms ease !important;
+}
+
+.suwayomi-user-modal-close:hover {
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 10%, transparent) !important;
+  color: var(--suwayomi-theme-text, #fff) !important;
+}
+
+.suwayomi-user-modal-body {
+  padding: 16px 18px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* Current active user card in modal */
+.suwayomi-user-current-section {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 12px 14px !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 4%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 8%, transparent) !important;
+  border-radius: 10px !important;
+}
+
+.suwayomi-user-current-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, var(--suwayomi-theme-accent, #5b74ef), color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 50%, #000)) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  text-transform: uppercase !important;
+  flex-shrink: 0 !important;
+}
+
+.suwayomi-user-current-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.suwayomi-user-current-name {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: var(--suwayomi-theme-text, currentColor) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.suwayomi-user-current-sub {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 0.72rem !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 65%, transparent) !important;
+}
+
+/* Tabs */
+.suwayomi-user-tabs {
+  display: flex !important;
+  gap: 4px !important;
+  padding: 3px !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 5%, transparent) !important;
+  border-radius: 8px !important;
+}
+
+.suwayomi-user-tab {
+  flex: 1 !important;
+  padding: 6px 10px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 65%, transparent) !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  text-align: center !important;
+}
+
+.suwayomi-user-tab.active {
+  background: var(--suwayomi-theme-surface, #1e202b) !important;
+  color: var(--suwayomi-theme-text, #fff) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Forms */
+.suwayomi-user-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin-bottom: 12px !important;
+}
+
+.suwayomi-user-form-group label {
+  font-size: 0.74rem !important;
+  font-weight: 600 !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 75%, transparent) !important;
+}
+
+.suwayomi-user-form-group input {
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 6%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 14%, transparent) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  color: var(--suwayomi-theme-text, #fff) !important;
+  font-size: 0.85rem !important;
+  outline: none !important;
+  transition: border-color 140ms ease, box-shadow 140ms ease !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.suwayomi-user-form-group input:focus {
+  border-color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 25%, transparent) !important;
+}
+
+.suwayomi-user-form-group select {
+  background-color: var(--suwayomi-theme-surface, #1e202b) !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+  color-scheme: var(--suwayomi-color-scheme, dark) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 16%, transparent) !important;
+  border-radius: 8px !important;
+  padding: 8px 34px 8px 12px !important;
+  font-size: 0.85rem !important;
+  outline: none !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: var(--suwayomi-select-arrow, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  transition: border-color 140ms ease, box-shadow 140ms ease !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.suwayomi-user-form-group select:focus {
+  border-color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 25%, transparent) !important;
+}
+
+.suwayomi-user-form-group select option {
+  background-color: var(--suwayomi-theme-surface, #1e202b) !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+  padding: 8px 12px !important;
+}
+
+.suwayomi-user-form-group select option:checked,
+.suwayomi-user-form-group select option:hover {
+  background-color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  color: #ffffff !important;
+}
+
+/* Buttons */
+.suwayomi-user-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 140ms ease, transform 90ms ease !important;
+  user-select: none !important;
+}
+
+.suwayomi-user-btn:active {
+  transform: scale(0.97) !important;
+}
+
+.suwayomi-user-btn-primary {
+  background: var(--suwayomi-theme-accent, #5b74ef) !important;
+  color: #ffffff !important;
+  width: 100% !important;
+}
+
+.suwayomi-user-btn-primary:hover {
+  background: color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 85%, #fff) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 35%, transparent) !important;
+}
+
+.suwayomi-user-btn-secondary {
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 8%, transparent) !important;
+  color: var(--suwayomi-theme-text, #fff) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 12%, transparent) !important;
+}
+
+.suwayomi-user-btn-secondary:hover {
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 12%, transparent) !important;
+}
+
+.suwayomi-user-btn-danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  padding: 4px 8px !important;
+  font-size: 0.72rem !important;
+}
+
+.suwayomi-user-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.22) !important;
+}
+
+.suwayomi-user-btn-sm {
+  padding: 5px 10px !important;
+  font-size: 0.74rem !important;
+}
+
+.suwayomi-user-error-banner {
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  color: #ef4444 !important;
+  font-size: 0.78rem !important;
+  margin-bottom: 10px !important;
+}
+
+/* User management list */
+.suwayomi-user-list-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 75%, transparent) !important;
+}
+
+.suwayomi-user-items-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+}
+
+.suwayomi-user-item-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 4%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 8%, transparent) !important;
+}
+
+.suwayomi-user-item-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.suwayomi-user-item-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.suwayomi-user-switch-notice {
+  margin-top: 10px !important;
+  padding: 9px 12px !important;
+  border-radius: 8px !important;
+  font-size: 0.78rem !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 5%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 10%, transparent) !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 70%, transparent) !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.suwayomi-user-switch-notice.warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
+  color: #f59e0b !important;
+  font-weight: 500 !important;
+}
+
+.suwayomi-user-quick-pick:hover {
+  background: color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 20%, transparent) !important;
+  border-color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  transform: scale(1.03) !important;
+}
+
+.suwayomi-user-quick-pick:active {
+  transform: scale(0.97) !important;
+}
+
+/* --- Dedicated Full-Screen Login Page --- */
+.suwayomi-login-page-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  background: var(--suwayomi-theme-bg, #0c1021) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+  animation: suwayomiFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.suwayomi-login-card {
+  width: 100% !important;
+  max-width: 380px !important;
+  background: var(--suwayomi-theme-surface, #1e202b) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-text, #fff) 12%, transparent) !important;
+  border-radius: 14px !important;
+  padding: 32px 28px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45) !important;
+  box-sizing: border-box !important;
+}
+
+.suwayomi-login-card-brand {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 20px !important;
+}
+
+.suwayomi-login-card-brand svg {
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+
+.suwayomi-login-card-brand-title {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+}
+
+.suwayomi-login-card-heading {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+  margin: 0 0 6px 0 !important;
+  letter-spacing: -0.015em !important;
+}
+
+.suwayomi-login-card-sub {
+  font-size: 0.8rem !important;
+  color: color-mix(in srgb, var(--suwayomi-theme-text, #fff) 60%, transparent) !important;
+  margin: 0 0 22px 0 !important;
+  line-height: 1.4 !important;
+}
+
+.suwayomi-login-card form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.suwayomi-login-card .suwayomi-user-form-group {
+  margin-bottom: 0 !important;
+}
+
+.suwayomi-login-btn-submit {
+  width: 100% !important;
+  padding: 10px 16px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  background: var(--suwayomi-theme-accent, #5b74ef) !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+  margin-top: 6px !important;
+  transition: all 140ms ease !important;
+}
+
+.suwayomi-login-btn-submit:hover {
+  background: color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 85%, #fff) !important;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 35%, transparent) !important;
+}
+
+.suwayomi-login-btn-submit:active {
+  transform: scale(0.98) !important;
+}
+
+/* --- Multi-Category Library Search & Filter Bar --- */
+.suwayomi-library-filter-bar {
+  --catfilter-accent: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor));
+  --catfilter-surface: var(--suwayomi-theme-surface, var(--suwayomi-theme-paper, var(--mui-palette-background-paper, rgba(30, 24, 20, 0.95))));
+  --catfilter-bg: var(--suwayomi-theme-bg, var(--mui-palette-background-default, rgba(20, 16, 14, 0.95)));
+  --catfilter-text: var(--suwayomi-theme-text, var(--mui-palette-text-primary, currentColor));
+  --catfilter-subtext: var(--suwayomi-theme-subtext, var(--mui-palette-text-secondary, color-mix(in srgb, var(--catfilter-text) 65%, transparent)));
+  --catfilter-divider: var(--suwayomi-theme-divider, var(--mui-palette-divider, color-mix(in srgb, var(--catfilter-text) 12%, transparent)));
+  --catfilter-contrast: var(--mui-palette-primary-contrastText, #ffffff);
+
+  width: calc(100% - 32px) !important;
+  max-width: 1400px !important;
+  margin: 14px auto 14px auto !important;
+  padding: 10px 14px !important;
+  box-sizing: border-box !important;
+  background-color: var(--catfilter-surface) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.22) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  transition: all 180ms ease !important;
+  position: relative !important;
+  z-index: 10 !important;
+  color: var(--catfilter-text) !important;
+}
+
+.suwayomi-catfilter-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.suwayomi-catfilter-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.84rem !important;
+  font-weight: 600 !important;
+  color: var(--catfilter-text) !important;
+}
+
+.suwayomi-catfilter-badge-mode {
+  font-size: 0.65rem !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  background: color-mix(in srgb, var(--catfilter-accent) 18%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--catfilter-accent) 35%, transparent) !important;
+  color: var(--catfilter-accent) !important;
+  letter-spacing: 0.03em !important;
+}
+
+.suwayomi-catfilter-summary-text {
+  font-size: 0.74rem !important;
+  color: var(--catfilter-subtext) !important;
+  font-weight: normal !important;
+}
+
+.suwayomi-catfilter-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.suwayomi-catfilter-mode-wrap {
+  display: flex !important;
+  align-items: center !important;
+  background: color-mix(in srgb, var(--catfilter-bg) 60%, transparent) !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  border-radius: 8px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+
+.suwayomi-catfilter-mode-btn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--catfilter-subtext) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 4px 9px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  letter-spacing: 0.02em !important;
+}
+
+.suwayomi-catfilter-mode-btn:hover {
+  color: var(--catfilter-text) !important;
+  background: color-mix(in srgb, var(--catfilter-text) 8%, transparent) !important;
+}
+
+.suwayomi-catfilter-mode-btn.active {
+  background: var(--catfilter-accent) !important;
+  color: var(--catfilter-contrast) !important;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--catfilter-accent) 35%, transparent) !important;
+}
+
+.suwayomi-catfilter-toggle-btn {
+  background: color-mix(in srgb, var(--catfilter-text) 5%, transparent) !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  color: var(--catfilter-text) !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+}
+
+.suwayomi-catfilter-toggle-btn:hover {
+  background: color-mix(in srgb, var(--catfilter-text) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--catfilter-text) 25%, transparent) !important;
+}
+
+.suwayomi-catfilter-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid var(--catfilter-divider) !important;
+}
+
+.suwayomi-catfilter-body.collapsed {
+  display: none !important;
+}
+
+.suwayomi-catfilter-search-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.suwayomi-catfilter-search-box {
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 1 240px !important;
+  min-width: 200px !important;
+  position: relative !important;
+  background: color-mix(in srgb, var(--catfilter-bg) 65%, transparent) !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  border-radius: 8px !important;
+  padding: 5px 10px !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+}
+
+.suwayomi-catfilter-search-box:focus-within {
+  border-color: var(--catfilter-accent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--catfilter-accent) 25%, transparent) !important;
+}
+
+.suwayomi-catfilter-search-icon {
+  margin-right: 8px !important;
+  color: var(--catfilter-subtext) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.suwayomi-catfilter-input {
+  flex: 1 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: var(--catfilter-text) !important;
+  font-size: 0.82rem !important;
+  font-family: inherit !important;
+}
+
+.suwayomi-catfilter-input::placeholder {
+  color: var(--catfilter-subtext) !important;
+}
+
+.suwayomi-catfilter-clear-input {
+  background: transparent !important;
+  border: none !important;
+  color: var(--catfilter-subtext) !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.suwayomi-catfilter-clear-input:hover {
+  color: var(--catfilter-text) !important;
+  background: color-mix(in srgb, var(--catfilter-text) 10%, transparent) !important;
+}
+
+/* Embedded inside the native Filter/Sort/Display popup (as the "Category" section)
+   instead of floating above the library grid — flatten the card chrome since it
+   already sits on the popup's own surface. */
+[role="tabpanel"] .suwayomi-library-filter-bar {
+  margin: 4px 0 6px 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 0 0 10px 0 !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-bottom: 1px solid var(--catfilter-divider) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  z-index: auto !important;
+}
+
+.suwayomi-catfilter-reset-btn {
+  background: transparent !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  color: var(--catfilter-subtext) !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  padding: 5px 10px !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+}
+
+.suwayomi-catfilter-reset-btn:hover {
+  color: var(--catfilter-text) !important;
+  border-color: color-mix(in srgb, var(--catfilter-text) 25%, transparent) !important;
+  background: color-mix(in srgb, var(--catfilter-text) 5%, transparent) !important;
+}
+
+/* Category Chips Row */
+.suwayomi-catfilter-chips-row {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.suwayomi-catfilter-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  font-size: 0.75rem !important;
+  font-weight: 550 !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+  border: 1px solid var(--catfilter-divider) !important;
+  background: color-mix(in srgb, var(--catfilter-text) 5%, transparent) !important;
+  color: var(--catfilter-text) !important;
+  transition: all 130ms cubic-bezier(0.2, 0, 0, 1) !important;
+  user-select: none !important;
+}
+
+.suwayomi-catfilter-chip:hover {
+  background: color-mix(in srgb, var(--catfilter-text) 10%, transparent) !important;
+  color: var(--catfilter-text) !important;
+  border-color: color-mix(in srgb, var(--catfilter-text) 25%, transparent) !important;
+}
+
+.suwayomi-catfilter-chip:active {
+  transform: scale(0.96) !important;
+}
+
+.suwayomi-catfilter-chip.active {
+  background: color-mix(in srgb, var(--catfilter-accent) 18%, transparent) !important;
+  border-color: var(--catfilter-accent) !important;
+  color: var(--catfilter-accent) !important;
+  font-weight: 650 !important;
+}
+
+.suwayomi-catfilter-chip-count {
+  font-size: 0.68rem !important;
+  padding: 1px 6px !important;
+  border-radius: 10px !important;
+  background: color-mix(in srgb, var(--catfilter-text) 10%, transparent) !important;
+  color: var(--catfilter-subtext) !important;
+}
+
+.suwayomi-catfilter-chip.active .suwayomi-catfilter-chip-count {
+  background: var(--catfilter-accent) !important;
+  color: var(--catfilter-contrast) !important;
+}
+
+/* Category / Tag filter groups */
+.suwayomi-catfilter-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.suwayomi-catfilter-group-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.suwayomi-catfilter-group-title {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--catfilter-subtext) !important;
+}
+
+.suwayomi-catfilter-tagmode-btn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--catfilter-subtext) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 4px 9px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  letter-spacing: 0.02em !important;
+}
+
+.suwayomi-catfilter-tagmode-btn:hover {
+  color: var(--catfilter-text) !important;
+  background: color-mix(in srgb, var(--catfilter-text) 8%, transparent) !important;
+}
+
+.suwayomi-catfilter-tagmode-btn.active {
+  background: var(--catfilter-accent) !important;
+  color: var(--catfilter-contrast) !important;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--catfilter-accent) 35%, transparent) !important;
+}
+
+/* Tag list can get long across a whole library — cap and let it scroll */
+.suwayomi-catfilter-tags-row {
+  max-height: 120px !important;
+  overflow-y: auto !important;
+  padding-right: 2px !important;
+}
+
+/* Status / Match count bar */
+.suwayomi-catfilter-status-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 0.72rem !important;
+  color: var(--catfilter-subtext) !important;
+  padding-top: 4px !important;
+  border-top: 1px solid var(--catfilter-divider) !important;
+}
+
+/* Multi-category Results View Container */
+.suwayomi-catfilter-results-grid {
+  display: none !important;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+  gap: 16px !important;
+  width: calc(100% - 32px) !important;
+  max-width: 1400px !important;
+  /* Inserted as the first child of the content area, so it needs its own top
+     breathing room — the native grid gets this from its own container padding,
+     which this element doesn't inherit. */
+  margin: 16px auto 40px auto !important;
+  box-sizing: border-box !important;
+}
+
+.suwayomi-catfilter-results-grid.active {
+  display: grid !important;
+}
+
+@media (min-width: 600px) {
+  .suwayomi-catfilter-results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 20px !important;
+  }
+}
+
+.suwayomi-catfilter-card-item {
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  text-decoration: none !important;
+  color: inherit !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  background-color: var(--suwayomi-theme-surface, var(--suwayomi-theme-paper, var(--mui-palette-background-paper, #1e140f))) !important;
+  border: 1px solid var(--suwayomi-theme-divider, var(--mui-palette-divider, color-mix(in srgb, var(--suwayomi-theme-text, currentColor) 10%, transparent))) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28) !important;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), box-shadow 200ms cubic-bezier(0.2, 0, 0, 1), border-color 180ms ease !important;
+}
+
+.suwayomi-catfilter-card-item:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.5) !important;
+  border-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, currentColor)) !important;
+}
+
+.suwayomi-catfilter-card-item:active {
+  transform: scale(0.98) !important;
+}
+
+.suwayomi-catfilter-card-cover-wrap {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 2/3 !important;
+  background: color-mix(in srgb, var(--suwayomi-theme-bg, #000) 80%, transparent) !important;
+  overflow: hidden !important;
+}
+
+.suwayomi-catfilter-card-cover {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  transition: transform 260ms ease !important;
+}
+
+.suwayomi-catfilter-card-item:hover .suwayomi-catfilter-card-cover {
+  transform: scale(1.03) !important;
+}
+
+.suwayomi-catfilter-card-badges {
+  position: absolute !important;
+  top: 6px !important;
+  left: 6px !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  z-index: 2 !important;
+}
+
+.suwayomi-catfilter-card-cat-badge {
+  font-size: 0.60rem !important;
+  font-weight: 700 !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+  background: rgba(0, 0, 0, 0.78) !important;
+  backdrop-filter: blur(6px) !important;
+  color: #ffffff !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+}
+
+.suwayomi-catfilter-card-overlay {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 30px 10px 10px 10px !important;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%) !important;
+  pointer-events: none !important;
+}
+
+.suwayomi-catfilter-card-title {
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  line-height: 1.25 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.suwayomi-catfilter-card-sub {
+  font-size: 0.68rem !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-top: 2px !important;
+}
+
+/* Empty state */
+.suwayomi-catfilter-empty {
+  text-align: center !important;
+  padding: 48px 16px !important;
+  color: var(--catfilter-subtext, color-mix(in srgb, var(--suwayomi-theme-text, #fff) 60%, transparent)) !important;
+  font-size: 0.88rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 10px !important;
+  grid-column: 1 / -1 !important;
+}
+
+.suwayomi-catfilter-empty svg {
+  color: var(--catfilter-subtext, color-mix(in srgb, var(--suwayomi-theme-text, #fff) 30%, transparent)) !important;
+}
+
+/* Accessibility & Screen Reader Hidden Elements (e.g. @dnd-kit instructions) */
+[id^="DndDescribedBy"],
+div[id*="DndDescribedBy"] {
+  display: none !important;
+}
+
+/* ============================================================
+ * Settings & About Navigation Buttons & Item Controls (Theme-Aware)
+ * Proportionately scaled to harmonize with top header & sidebar.
+ * Isolated from sidebar and global navigation elements.
+ * ============================================================ */
+
+/* Settings & About List container - keeps comfortable flow and bottom breathing room */
+body.suwayomi-page-settings main .MuiList-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiList-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiList-root:not(.MuiDrawer-paper *),
+main .MuiList-root:has(> a.MuiListItemButton-root[href*="/settings/"]),
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) {
+  padding-top: 6px !important;
+  padding-bottom: 40px !important;
+}
+
+/* Settings & About Subheaders (e.g. Server Info, WebUI Info, Links) */
+body.suwayomi-page-settings main .MuiListSubheader-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiListSubheader-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListSubheader-root:not(.MuiDrawer-paper *),
+main .MuiListSubheader-root[id*="settings"]:not(.MuiDrawer-paper *),
+main .MuiListSubheader-root[id*="about"]:not(.MuiDrawer-paper *),
+main .MuiListSubheader-root[id*="backup"]:not(.MuiDrawer-paper *),
+main .MuiListSubheader-root[id*="theme"]:not(.MuiDrawer-paper *) {
+  background: transparent !important;
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  font-size: 0.76rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 14px 18px 5px 18px !important;
+  line-height: 1.4 !important;
+}
+
+/* All Interactive Buttons (Settings Main page, Subdirectories, About & More Pages) */
+body.suwayomi-page-settings main .MuiListItemButton-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiListItemButton-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-more main .MuiListItemButton-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemButton-root:not(.MuiDrawer-paper *),
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *),
+main .MuiList-root:has(> a[href*="/settings/"]) .MuiListItemButton-root:not(.MuiDrawer-paper *),
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemButton-root:not(.MuiDrawer-paper *) {
+  min-height: 50px !important;
+  padding: 10px 18px !important;
+  margin: 4px 14px !important;
+  width: calc(100% - 28px) !important;
+  box-sizing: border-box !important;
+  border-radius: 10px !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 90%, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 10%) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 18%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition: background-color 140ms ease,
+              border-color 140ms ease,
+              box-shadow 140ms ease,
+              transform 100ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+body.suwayomi-page-settings main .MuiListItemButton-root:not(.MuiDrawer-paper *):hover,
+body.suwayomi-page-about main .MuiListItemButton-root:not(.MuiDrawer-paper *):hover,
+body.suwayomi-page-more main .MuiListItemButton-root:not(.MuiDrawer-paper *):hover,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemButton-root:not(.MuiDrawer-paper *):hover,
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *):hover,
+main .MuiList-root:has(> a[href*="/settings/"]) .MuiListItemButton-root:not(.MuiDrawer-paper *):hover,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemButton-root:not(.MuiDrawer-paper *):hover {
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 80%, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 20%) !important;
+  border-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 40%, transparent) !important;
+  box-shadow: 0 3px 12px -2px color-mix(in srgb, var(--suwayomi-theme-accent, #5b74ef) 20%, transparent) !important;
+}
+
+body.suwayomi-page-settings main .MuiListItemButton-root:not(.MuiDrawer-paper *):active,
+body.suwayomi-page-about main .MuiListItemButton-root:not(.MuiDrawer-paper *):active,
+body.suwayomi-page-more main .MuiListItemButton-root:not(.MuiDrawer-paper *):active,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemButton-root:not(.MuiDrawer-paper *):active,
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *):active,
+main .MuiList-root:has(> a[href*="/settings/"]) .MuiListItemButton-root:not(.MuiDrawer-paper *):active,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemButton-root:not(.MuiDrawer-paper *):active {
+  transform: scale(0.985) !important;
+}
+
+/* Settings, About & More Setting / Info Rows */
+body.suwayomi-page-settings main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *),
+body.suwayomi-page-more main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *),
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *) {
+  min-height: 50px !important;
+  padding: 10px 18px !important;
+  margin: 4px 14px !important;
+  width: calc(100% - 28px) !important;
+  box-sizing: border-box !important;
+  border-radius: 10px !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 90%, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 10%) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 18%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease !important;
+}
+
+body.suwayomi-page-settings main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *):hover,
+body.suwayomi-page-about main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *):hover,
+body.suwayomi-page-more main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *):hover,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *):hover,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *):hover {
+  border-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 30%, transparent) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 85%, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 15%) !important;
+}
+
+/* Icon alignment and sizing within settings, about & more buttons */
+body.suwayomi-page-settings main .MuiListItemIcon-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiListItemIcon-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-more main .MuiListItemIcon-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemIcon-root:not(.MuiDrawer-paper *),
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *) .MuiListItemIcon-root,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemIcon-root:not(.MuiDrawer-paper *) {
+  min-width: 42px !important;
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+body.suwayomi-page-settings main .MuiListItemIcon-root:not(.MuiDrawer-paper *) svg,
+body.suwayomi-page-about main .MuiListItemIcon-root:not(.MuiDrawer-paper *) svg,
+body.suwayomi-page-more main .MuiListItemIcon-root:not(.MuiDrawer-paper *) svg,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemIcon-root:not(.MuiDrawer-paper *) svg,
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *) .MuiListItemIcon-root svg,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemIcon-root:not(.MuiDrawer-paper *) svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+/* Primary text typography within settings, about & more buttons */
+body.suwayomi-page-settings main .MuiListItemText-root .MuiTypography-root:not(.MuiTypography-colorTextSecondary):not(.MuiListItemText-secondary *),
+body.suwayomi-page-about main .MuiListItemText-root .MuiTypography-root:not(.MuiTypography-colorTextSecondary):not(.MuiListItemText-secondary *),
+body.suwayomi-page-more main .MuiListItemText-root .MuiTypography-root:not(.MuiTypography-colorTextSecondary):not(.MuiListItemText-secondary *),
+body.suwayomi-page-settings main .MuiListItemText-primary,
+body.suwayomi-page-about main .MuiListItemText-primary,
+body.suwayomi-page-more main .MuiListItemText-primary,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemText-primary,
+main a.MuiListItemButton-root[href*="/settings/"]:not(.MuiDrawer-paper *) .MuiListItemText-primary,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemText-primary {
+  font-size: 0.92rem !important;
+  font-weight: 550 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--suwayomi-theme-text, var(--mui-palette-text-primary, #ffffff)) !important;
+}
+
+/* Secondary / Subtitle text within settings & about items */
+body.suwayomi-page-settings main .MuiListItemText-secondary,
+body.suwayomi-page-about main .MuiListItemText-secondary,
+body.suwayomi-page-more main .MuiListItemText-secondary,
+body.suwayomi-page-settings main .MuiListItemText-secondary *,
+body.suwayomi-page-about main .MuiListItemText-secondary *,
+body.suwayomi-page-more main .MuiListItemText-secondary *,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemText-secondary,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemText-secondary *,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemText-secondary,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiListItemText-secondary * {
+  font-size: 0.79rem !important;
+  color: var(--suwayomi-theme-subtext, var(--mui-palette-text-secondary, color-mix(in srgb, var(--suwayomi-theme-text, #fff) 65%, transparent))) !important;
+  margin-top: 1px !important;
+  line-height: 1.35 !important;
+}
+
+/* Outlined action buttons (e.g. Check for update on About page) */
+body.suwayomi-page-settings main .MuiButton-outlined,
+body.suwayomi-page-about main .MuiButton-outlined,
+body.suwayomi-page-more main .MuiButton-outlined,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiButton-outlined,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiButton-outlined {
+  border-radius: 8px !important;
+  border-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 35%, transparent) !important;
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 6%, transparent) !important;
+  text-transform: none !important;
+  font-size: 0.8rem !important;
+  font-weight: 550 !important;
+  padding: 4px 12px !important;
+  min-height: 30px !important;
+  transition: all 130ms ease !important;
+}
+
+body.suwayomi-page-settings main .MuiButton-outlined:hover,
+body.suwayomi-page-about main .MuiButton-outlined:hover,
+body.suwayomi-page-more main .MuiButton-outlined:hover,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiButton-outlined:hover,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiButton-outlined:hover {
+  border-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 16%, transparent) !important;
+}
+
+body.suwayomi-page-settings main .MuiButton-outlined:active,
+body.suwayomi-page-about main .MuiButton-outlined:active,
+body.suwayomi-page-more main .MuiButton-outlined:active,
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiButton-outlined:active,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiButton-outlined:active {
+  transform: scale(0.97) !important;
+}
+
+/* Dividers on Settings, About & More pages */
+body.suwayomi-page-settings main .MuiDivider-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiDivider-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-more main .MuiDivider-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiDivider-root:not(.MuiDrawer-paper *),
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiDivider-root:not(.MuiDrawer-paper *) {
+  border-color: color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 12%, transparent) !important;
+  margin: 10px 14px !important;
+  opacity: 0.6 !important;
+}
+
+/* Accordion on About page (Debug Information) */
+body.suwayomi-page-settings main .MuiAccordion-root:not(.MuiDrawer-paper *),
+body.suwayomi-page-about main .MuiAccordion-root:not(.MuiDrawer-paper *),
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiAccordion-root:not(.MuiDrawer-paper *),
+main .MuiAccordion-root:not(.MuiDrawer-paper *) {
+  margin: 4px 14px !important;
+  width: calc(100% - 28px) !important;
+  box-sizing: border-box !important;
+  border-radius: 10px !important;
+  background-color: color-mix(in srgb, var(--suwayomi-theme-surface, var(--mui-palette-background-paper, #181b2a)) 90%, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 10%) !important;
+  border: 1px solid color-mix(in srgb, var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) 18%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+}
+
+/* Theme accent for switches on settings pages */
+body.suwayomi-page-settings main .MuiSwitch-switchBase.Mui-checked,
+body.suwayomi-page-about main .MuiSwitch-switchBase.Mui-checked,
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiSwitch-switchBase.Mui-checked,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiSwitch-switchBase.Mui-checked {
+  color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+}
+
+body.suwayomi-page-settings main .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track,
+body.suwayomi-page-about main .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track,
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+  background-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+  opacity: 0.55 !important;
+}
+
+/* Theme accent for sliders on settings pages */
+body.suwayomi-page-settings main .MuiSlider-thumb,
+body.suwayomi-page-about main .MuiSlider-thumb,
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiSlider-thumb,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiSlider-thumb,
+body.suwayomi-page-settings main .MuiSlider-track,
+body.suwayomi-page-about main .MuiSlider-track,
+body:is(.suwayomi-page-settings, .suwayomi-page-about) main .MuiSlider-track,
+main .MuiList-root:has([id*="settings"], [id*="about"], [id*="server-"], [id*="webui"], [id*="browse-"], [id*="appearance-"], [id*="reader-"], [id*="library-"], [id*="download-"], [id*="tracking-"], [id*="backup"]) .MuiSlider-track {
+  background-color: var(--suwayomi-theme-accent, var(--mui-palette-primary-main, #5b74ef)) !important;
+}
+
+/* Mobile responsive padding & margins for settings, about and more */
+@media (max-width: 599.98px) {
+  body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItemButton-root:not(.MuiDrawer-paper *),
+  body:is(.suwayomi-page-settings, .suwayomi-page-about, .suwayomi-page-more) main .MuiListItem-root:not(.MuiListItemButton-root):not(.MuiListSubheader-root):not(.MuiDrawer-paper *) {
+    margin: 4px 8px !important;
+    width: calc(100% - 16px) !important;
+    padding: 10px 14px !important;
+  }
+}
+
+/* Mobile Bottom Navigation Theming */
+.MuiBottomNavigation-root {
+  background-color: var(--suwayomi-theme-surface, #181b2a) !important;
+  border-top: 1px solid var(--suwayomi-theme-divider, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.MuiBottomNavigationAction-root {
+  color: var(--suwayomi-theme-subtext, rgba(255, 255, 255, 0.6)) !important;
+  transition: color 140ms ease !important;
+}
+
+.MuiBottomNavigationAction-root.Mui-selected {
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+
+.MuiBottomNavigationAction-root.Mui-selected .MuiSvgIcon-root {
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+
+/* Bottom Options Drawer (Filter, Sort, Display) Theming & Ergonomics */
+/* This MUI version puts the anchor class on the Drawer root (MuiDrawer-anchorBottom),
+   not the paper (MuiDrawer-paperAnchorBottom) — match both so this survives either
+   convention. anchorBottom also correctly excludes the docked sidebar (anchorLeft). */
+.MuiDrawer-anchorBottom .MuiDrawer-paper,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom {
+  border-top-left-radius: 18px !important;
+  border-top-right-radius: 18px !important;
+  background-color: var(--suwayomi-theme-surface, #181b2a) !important;
+  border-top: 1px solid var(--suwayomi-theme-divider, rgba(255, 255, 255, 0.12)) !important;
+  border-left: 1px solid var(--suwayomi-theme-divider, rgba(255, 255, 255, 0.08)) !important;
+  border-right: 1px solid var(--suwayomi-theme-divider, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: 0 -8px 36px rgba(0, 0, 0, 0.4) !important;
+  color: var(--suwayomi-theme-text, #ffffff) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiTabs-root,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiTabs-root {
+  border-bottom: 1px solid var(--suwayomi-theme-divider, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiTab-root,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiTab-root {
+  color: var(--suwayomi-theme-subtext, rgba(255, 255, 255, 0.6)) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  font-size: 0.9rem !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiTab-root.Mui-selected,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiTab-root.Mui-selected {
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiTabs-indicator,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiTabs-indicator {
+  background-color: var(--suwayomi-theme-accent, #5b74ef) !important;
+  height: 3px !important;
+  border-radius: 3px 3px 0 0 !important;
+}
+
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiCheckbox-root.Mui-checked,
+.MuiDrawer-anchorBottom .MuiDrawer-paper .MuiRadio-root.Mui-checked,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiCheckbox-root.Mui-checked,
+.MuiDrawer-root .MuiDrawer-paperAnchorBottom .MuiRadio-root.Mui-checked {
+  color: var(--suwayomi-theme-accent, #5b74ef) !important;
+}
+

@@ -205,17 +205,19 @@ object WebInterfaceManager {
         val tempWebUIRoot = createServableDirectory()
         val orgIndexHtml = File("$tempWebUIRoot/index.html")
 
-        if (ServerSubpath.isDefined() && orgIndexHtml.exists()) {
-            val originalIndexHtml = orgIndexHtml.readText()
-            val subpathInjectionBaseTag = "<base href=\"${ServerSubpath.asRootPath()}\">"
+        if (orgIndexHtml.exists()) {
+            var indexHtmlContent = orgIndexHtml.readText()
 
-            val indexHtmlWithSubpathInjection =
-                originalIndexHtml.replace(
-                    "<head>",
-                    "<head>$subpathInjectionBaseTag",
-                )
+            if (ServerSubpath.isDefined()) {
+                val subpathInjectionBaseTag = "<base href=\"${ServerSubpath.asRootPath()}\">"
+                indexHtmlContent =
+                    indexHtmlContent.replace(
+                        "<head>",
+                        "<head>$subpathInjectionBaseTag",
+                    )
+            }
 
-            orgIndexHtml.writeText(indexHtmlWithSubpathInjection)
+            orgIndexHtml.writeText(indexHtmlContent)
         }
 
         return tempWebUIRoot
