@@ -2,6 +2,12 @@ package suwayomi.tachidesk.global.impl
 
 import eu.kanade.tachiyomi.network.NetworkHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -31,6 +37,7 @@ import xyz.nulldev.androidcompat.webkit.dispose
 import xyz.nulldev.androidcompat.webkit.disposeWithJsHandler
 import xyz.nulldev.androidcompat.webkit.evaluateJavaScript
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.HeadlessException
 import java.awt.Rectangle
 import java.awt.Toolkit
@@ -45,7 +52,14 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Date
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageTypeSpecifier
+import javax.imageio.ImageWriteParam
+import javax.imageio.metadata.IIOMetadata
+import javax.imageio.metadata.IIOMetadataNode
 import javax.swing.JPanel
 
 class KcefWebView {
@@ -58,6 +72,25 @@ class KcefWebView {
 
     companion object {
         private val networkHelper: NetworkHelper by injectLazy()
+
+        // 0.9 keeps text/edges sharp (lower values get grainy), at a fraction of the size/encoding time of png
+        private const val JPEG_QUALITY_SETTLED = 0.9f
+
+        // used while the page keeps repainting (scrolling, animations), where speed matters more than sharpness
+        private const val JPEG_QUALITY_MOVING = 0.75f
+
+        // painting more often than this counts as "moving"
+        private const val MOVING_PAINT_INTERVAL_NANOS = 50_000_000L
+
+        // pause after the last paint, before resending the last frame in full quality
+        private const val SETTLE_DELAY_MS = 150L
+
+        // frames sent, but not yet displayed by the client, before waiting for the client (prevents frames from
+        // piling up in the websocket queue when the client is slower than the server)
+        private const val MAX_FRAMES_IN_FLIGHT = 2
+        private const val FRAME_ACK_TIMEOUT_MS = 500L
+
+        private const val WINDOWLESS_FRAME_RATE = 60
 
         fun Cookie.toCefCookie(): CefCookie {
             val cookie = this
@@ -105,13 +138,6 @@ class KcefWebView {
         val message: String,
     ) : Event()
 
-    @Suppress("ArrayInDataClass")
-    @Serializable
-    @SerialName("render")
-    private data class RenderEvent(
-        val image: ByteArray,
-    ) : Event()
-
     @Serializable
     @SerialName("load")
     private data class LoadEvent(
@@ -127,7 +153,35 @@ class KcefWebView {
         val content: String,
     ) : Event()
 
+    @Serializable
+    @SerialName("cursor")
+    private data class CursorEvent(
+        val cursor: String,
+    ) : Event()
+
     private inner class DisplayHandler : CefDisplayHandlerAdapter() {
+        // Windowless rendering, so the cursor has to be shown by the client: map the (AWT) cursor type to a css cursor
+        override fun onCursorChange(
+            browser: CefBrowser,
+            cursorType: Int,
+        ): Boolean {
+            val cursor =
+                when (cursorType) {
+                    Cursor.HAND_CURSOR -> "pointer"
+                    Cursor.TEXT_CURSOR -> "text"
+                    Cursor.CROSSHAIR_CURSOR -> "crosshair"
+                    Cursor.WAIT_CURSOR -> "wait"
+                    Cursor.MOVE_CURSOR -> "move"
+                    Cursor.N_RESIZE_CURSOR, Cursor.S_RESIZE_CURSOR -> "ns-resize"
+                    Cursor.E_RESIZE_CURSOR, Cursor.W_RESIZE_CURSOR -> "ew-resize"
+                    Cursor.NE_RESIZE_CURSOR, Cursor.SW_RESIZE_CURSOR -> "nesw-resize"
+                    Cursor.NW_RESIZE_CURSOR, Cursor.SE_RESIZE_CURSOR -> "nwse-resize"
+                    else -> "default"
+                }
+            WebView.notifyAllClients(Json.encodeToString<Event>(CursorEvent(cursor)))
+            return true
+        }
+
         override fun onConsoleMessage(
             browser: CefBrowser,
             level: CefSettings.LogSeverity,
@@ -200,6 +254,12 @@ class KcefWebView {
             frame: CefFrame?,
             request: CefRequest,
         ): Boolean {
+            // never block the page itself, only what it loads
+            if (request.resourceType != CefRequest.ResourceType.RT_MAIN_FRAME && AdBlocker.shouldBlock(request.url)) {
+                logger.trace { "Blocked ad/tracker: ${request.url}" }
+                return true
+            }
+
             val ua = System.getProperty("http.agent")
             request.setHeaderByName("user-agent", ua, true)
             logger.trace { "Using user-agent $ua" }
@@ -225,7 +285,19 @@ class KcefWebView {
     // Loosely based on
     // https://github.com/JetBrains/jcef/blob/main/java/org/cef/browser/CefBrowserOsr.java
     private inner class RenderHandler : CefRenderHandlerAdapter() {
-        var myImage: BufferedImage? = null
+        // The newest frame CEF painted. Only the latest frame is ever sent, so slow encoding/transmitting skips
+        // intermediate frames instead of stalling the CEF render thread or congesting the websocket.
+        private val lock = Any()
+        private var latestImage: BufferedImage? = null
+        private var hasNewFrame = false
+        private var lastPaintNanos = 0L
+        private var paintIntervalNanos = Long.MAX_VALUE
+
+
+        private var encodeImage: BufferedImage? = null
+        private val isEncoding = AtomicBoolean(false)
+        private val framesInFlight = AtomicInteger(0)
+        private val encodeScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
         override fun getViewRect(browser: CefBrowser): Rectangle = Rectangle(0, 0, width, height)
 
@@ -237,32 +309,165 @@ class KcefWebView {
             width: Int,
             height: Int,
         ) {
-            var image = myImage ?: BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE)
+            if (!WebView.hasClients) return
 
-            if (image.width != width || image.height != height) {
-                image = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE)
+            synchronized(lock) {
+                var image = latestImage
+                if (image == null || image.width != width || image.height != height) {
+                    // opaque RGB, since jpeg has no alpha channel
+                    image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+                    latestImage = image
+                }
+
+                val dst = (image.raster.dataBuffer as DataBufferInt).data
+                buffer.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer().get(dst)
+                hasNewFrame = true
+
+                val now = System.nanoTime()
+                paintIntervalNanos = now - lastPaintNanos
+                lastPaintNanos = now
             }
 
-            val dst = (image.raster.getDataBuffer() as DataBufferInt).getData()
-            val src = buffer.order(ByteOrder.LITTLE_ENDIAN).asIntBuffer()
-            src.get(dst)
+            scheduleEncode()
+        }
 
-            myImage = image
-            val stream = ByteArrayOutputStream()
-            val success = ImageIO.write(myImage, "png", stream)
-            if (!success) {
-                throw IllegalStateException("Failed to convert image to PNG")
+        private fun scheduleEncode() {
+            if (!isEncoding.compareAndSet(false, true)) {
+                return
             }
 
-            WebView.notifyAllClients(
-                Json.encodeToString<Event>(
-                    RenderEvent(stream.toByteArray()),
-                ),
-            )
+            encodeScope.launch {
+                try {
+                    var wasMoving = false
+                    while (WebView.hasClients) {
+                        awaitFrameSlot()
+
+                        val frame = takeLatestFrame()
+                        if (frame == null) {
+                            if (!wasMoving) break
+
+                            // The page stopped changing, while the last frame was sent in low quality. After a short
+                            // pause (in case it continues), the same frame is sent again in full quality.
+                            delay(SETTLE_DELAY_MS)
+                            wasMoving = false
+                            synchronized(lock) { hasNewFrame = true }
+                            continue
+                        }
+
+                        val isMoving = synchronized(lock) { isPageMoving() }
+                        wasMoving = isMoving
+                        val quality = if (isMoving) JPEG_QUALITY_MOVING else JPEG_QUALITY_SETTLED
+                        framesInFlight.incrementAndGet()
+                        WebView.notifyAllClientsBinary(encodeJpeg(frame, quality))
+                    }
+                } catch (t: Throwable) {
+                    logger.debug(t) { "Failed to encode/send webview frame" }
+                } finally {
+                    isEncoding.set(false)
+                }
+
+                // a frame could have been painted right after the last check
+                if (synchronized(lock) { hasNewFrame }) {
+                    scheduleEncode()
+                }
+            }
+        }
+
+        // must be called while holding the lock
+        private fun isPageMoving(): Boolean =
+            paintIntervalNanos < MOVING_PAINT_INTERVAL_NANOS &&
+                System.nanoTime() - lastPaintNanos < SETTLE_DELAY_MS * 1_000_000L
+
+        // called when the client displayed (or dropped) a frame
+        fun onFrameAck() {
+            framesInFlight.updateAndGet { maxOf(it - 1, 0) }
+        }
+
+        // waits until the client caught up, but not forever, in case it does not acknowledge frames (e.g. outdated page)
+        private suspend fun awaitFrameSlot() {
+            var waitedMs = 0L
+            while (framesInFlight.get() >= MAX_FRAMES_IN_FLIGHT && WebView.hasClients) {
+                if (waitedMs >= FRAME_ACK_TIMEOUT_MS) {
+                    framesInFlight.set(0)
+                    return
+                }
+                delay(2)
+                waitedMs += 2
+            }
+        }
+
+        // copies the latest frame, so that CEF can paint the next one while this one is encoded
+        private fun takeLatestFrame(): BufferedImage? =
+            synchronized(lock) {
+                val latest = latestImage
+                if (!hasNewFrame || latest == null) {
+                    return@synchronized null
+                }
+                hasNewFrame = false
+
+                var copy = encodeImage
+                if (copy == null || copy.width != latest.width || copy.height != latest.height) {
+                    copy = BufferedImage(latest.width, latest.height, BufferedImage.TYPE_INT_RGB)
+                    encodeImage = copy
+                }
+
+                val src = (latest.raster.dataBuffer as DataBufferInt).data
+                System.arraycopy(src, 0, (copy.raster.dataBuffer as DataBufferInt).data, 0, src.size)
+                copy
+            }
+
+        private fun encodeJpeg(
+            image: BufferedImage,
+            quality: Float,
+        ): ByteArray {
+            val out = ByteArrayOutputStream()
+            val writer = ImageIO.getImageWritersByFormatName("jpeg").next()
+            try {
+                ImageIO.createImageOutputStream(out).use { imageOut ->
+                    writer.output = imageOut
+                    val params =
+                        writer.defaultWriteParam.apply {
+                            compressionMode = ImageWriteParam.MODE_EXPLICIT
+                            compressionQuality = quality
+                        }
+                    val metadata =
+                        writer
+                            .getDefaultImageMetadata(ImageTypeSpecifier.createFromRenderedImage(image), params)
+                            .also { disableChromaSubsampling(it) }
+                    writer.write(null, IIOImage(image, null, metadata), params)
+                }
+            } finally {
+                writer.dispose()
+            }
+            return out.toByteArray()
+        }
+
+        // By default, jpeg stores the color channels in half the resolution, which makes edges (especially of colored
+        // text) look fuzzy/grainy. Storing them in full resolution (4:4:4) costs a bit of size, but looks a lot better.
+        private fun disableChromaSubsampling(metadata: IIOMetadata) {
+            val format = "javax_imageio_jpeg_image_1.0"
+            val root = metadata.getAsTree(format) as IIOMetadataNode
+            val components = root.getElementsByTagName("componentSpec")
+            for (i in 0 until components.length) {
+                (components.item(i) as IIOMetadataNode).apply {
+                    setAttribute("HsamplingFactor", "1")
+                    setAttribute("VsamplingFactor", "1")
+                }
+            }
+            metadata.setFromTree(format, root)
+        }
+
+        fun close() {
+            // only cancel the running jobs; the scope has to stay usable, since "destroy" is also called on creation
+            encodeScope.coroutineContext.cancelChildren()
+            framesInFlight.set(0)
         }
     }
 
+    fun frameAck() = renderHandler.onFrameAck()
+
     init {
+        AdBlocker.start()
         destroy()
         kcefClient =
             runBlocking {
@@ -293,6 +498,7 @@ class KcefWebView {
     }
 
     fun destroy() {
+        renderHandler.close()
         flush()
         browser?.close(true)
         browser?.dispose()
@@ -314,6 +520,8 @@ class KcefWebView {
                 ).apply {
                     // NOTE: Without this, we don't seem to be receiving any events
                     createImmediately()
+                    // the default is 30fps, which makes scrolling look choppy
+                    setWindowlessFrameRate(WINDOWLESS_FRAME_RATE)
                 }
     }
 
@@ -598,7 +806,7 @@ class KcefWebView {
                     0,
                     false,
                     MouseWheelEvent.WHEEL_UNIT_SCROLL,
-                    -d,
+                    d,
                     1,
                 )
             browser!!.sendMouseWheelEvent(ev)

@@ -8,10 +8,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.eclipse.jetty.websocket.core.CloseStatus
 import suwayomi.tachidesk.manga.impl.update.Websocket
+import java.nio.ByteBuffer
 
 object WebView : Websocket<String>() {
     private val logger = KotlinLogging.logger {}
     private var driver: KcefWebView? = null
+
+    val hasClients: Boolean
+        get() = clients.isNotEmpty()
 
     override fun addClient(ctx: WsContext) {
         if (clients.isNotEmpty()) {
@@ -32,6 +36,11 @@ object WebView : Websocket<String>() {
             driver?.destroy()
             driver = null
         }
+    }
+
+    /** Sends a binary frame (e.g. a rendered page image), which avoids the size/parsing overhead of encoding it in json. */
+    fun notifyAllClientsBinary(data: ByteArray) {
+        clients.values.forEach { it.send(ByteBuffer.wrap(data)) }
     }
 
     override fun notifyClient(
@@ -93,6 +102,11 @@ object WebView : Websocket<String>() {
     @SerialName("ping")
     class JsPingMessage : TypeObject()
 
+    // sent by the client after displaying (or dropping) a rendered frame
+    @Serializable
+    @SerialName("frameAck")
+    class JsFrameAckMessage : TypeObject()
+
     override fun handleRequest(ctx: WsMessageContext) {
         val dr = driver ?: return
         try {
@@ -123,6 +137,10 @@ object WebView : Websocket<String>() {
 
                 is JsPingMessage -> {
                     notifyAllClients("{\"type\":\"pong\"}")
+                }
+
+                is JsFrameAckMessage -> {
+                    dr.frameAck()
                 }
             }
         } catch (e: Exception) {

@@ -20,9 +20,12 @@
         body {
             display: flex;
             flex-direction: column;
-            font-family: "Roboto","Helvetica","Arial",sans-serif;
+            background-color: #0f1015;
+            color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             font-weight: 400;
             letter-spacing: 0em;
+            overflow: hidden;
         }
         body.disconnected::after {
             content: "${MR.strings.webview_label_disconnected.localized(locale)}";
@@ -38,49 +41,171 @@
             cursor: not-allowed;
         }
         header {
-            background-color: rgb(34, 38, 53);
-            box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 4px -1px, rgba(0, 0, 0, 0.14) 0px 4px 5px 0px, rgba(0, 0, 0, 0.12) 0px 1px 10px 0px;
+            background-color: rgba(18, 20, 29, 0.96);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             color: #fff;
-            padding: 8px 32px;
+            padding: 0 16px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-shrink: 0;
         }
-        header h1, header p {
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+        .header-logo {
+            flex-shrink: 0;
+            border-radius: 50%;
+        }
+        header h1 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: #f3f4f6;
             margin: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 220px;
         }
         header nav {
+            flex: 1;
             display: flex;
-            flex-wrap: wrap;
-            column-gap: 20px;
+            justify-content: center;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        .url-omnibar {
+            display: flex;
             align-items: center;
+            gap: 8px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
+            padding: 3px 5px 3px 12px;
+            transition: all 160ms cubic-bezier(0.2, 0, 0, 1);
+            box-sizing: border-box;
         }
-        header form {
-            display: flex;
-            gap: 5px;
-            flex: auto 1 1;
-            min-width: 400px;
-        }
-        header label {
-            flex: auto 0 0;
-            cursor: pointer;
-        }
-        header button {
-            all: unset;
-            padding: 8px;
-            border-radius: 50%;
-            min-width: 1em;
-            line-height: 1;
-            text-align: center;
-        }
-        header button:not([disabled]) {
-            cursor: pointer;
-        }
-        header button:not([disabled]):hover {
+        .url-omnibar:focus-within {
             background-color: rgba(255, 255, 255, 0.08);
+            border-color: #35d4d5;
+            box-shadow: 0 0 0 2px rgba(53, 212, 213, 0.25);
         }
-        header input {
-            flex: 100% 1 1;
+        .url-lock-icon {
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+        .url-omnibar input {
+            all: unset;
+            flex: 1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8125rem;
+            color: #f3f4f6;
+            min-width: 0;
+        }
+        .url-omnibar input::placeholder {
+            color: #6b7280;
+        }
+        .url-omnibar button {
+            all: unset;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #35d4d5;
+            color: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 100ms cubic-bezier(0.2, 0, 0, 1), opacity 150ms ease;
+            flex-shrink: 0;
+        }
+        .url-omnibar button:active {
+            transform: scale(0.92);
+        }
+        .url-omnibar button[disabled] {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .toggle-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.75rem;
+            color: #9ca3af;
+            cursor: pointer;
+            user-select: none;
+            transition: all 140ms ease;
+        }
+        .toggle-pill:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #f3f4f6;
+        }
+        .toggle-pill input {
+            margin: 0;
+            accent-color: #35d4d5;
+            cursor: pointer;
+        }
+        .hint-badge {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: #9ca3af;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: help;
+            transition: all 140ms ease;
+        }
+        .hint-badge:hover {
+            color: #35d4d5;
+            border-color: rgba(53, 212, 213, 0.3);
+            background: rgba(53, 212, 213, 0.1);
+        }
+        .hint-tooltip {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #1e202e;
+            color: #e5e7eb;
+            font-size: 0.75rem;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: all 140ms ease;
+            z-index: 100;
+        }
+        .hint-badge:hover .hint-tooltip {
+            opacity: 1;
+            transform: translateY(0);
         }
         main, iframe {
             height: 100%;
@@ -99,35 +224,55 @@
             padding: 0;
             margin: 0;
             border: none;
+            /* an input would show the text cursor everywhere, the actual cursor is sent by the browser (see "cursor" event) */
+            cursor: default;
         }
         main .message, main .status {
             position: relative;
             z-index: 1;
         }
         main .message {
-            padding: 8px;
-            max-width: 1100px;
-            margin: auto;
-            font-style: italic;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 18px;
+            border-radius: 8px;
+            background: rgba(18, 20, 29, 0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #9ca3af;
+            font-size: 0.8125rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
         }
         main .message.error {
-            color: red;
-            font-style: regular;
-            font-weight: bold;
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(30, 16, 20, 0.92);
+            font-weight: 600;
         }
         main .message:empty {
             display: none;
         }
         main .status {
             position: absolute;
-            bottom: 0;
-            left: 0;
+            bottom: 12px;
+            left: 12px;
             max-width: 50%;
-            background: #555;
-            color: white;
-            padding: 2px 4px;
-            font-size: 0.8rem;
-            border-top-right-radius: 3px;
+            background: rgba(18, 20, 29, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d1d5db;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
         }
         main .status:empty {
             display: none;
@@ -138,10 +283,15 @@
             right: 0;
             max-width: fit-content;
             min-height: calc(1.5em + 2px + 2px + 4px);
-            min-width: 120px;
-            flex-wrap: wrap;
-            border-radius: 4px;
-            border: 1px solid #333;
+            min-width: 130px;
+            flex-direction: column;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: #181924;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+            padding: 4px;
+            z-index: 50;
         }
         main .contextmenu.show {
             display: flex;
@@ -150,15 +300,18 @@
             all: unset;
             line-height: 1.5;
             flex-grow: 1;
-            background: white;
-            transition: background 0.1s ease-in-out;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 0.8125rem;
+            transition: background 0.12s ease;
             cursor: pointer;
-            border: 0.5px solid #666;
-            padding: 2px 4px;
-            text-align: center;
+            border-radius: 4px;
+            padding: 6px 12px;
+            text-align: left;
         }
         main .contextmenu button:hover {
-            background: #eee;
+            background: rgba(255, 255, 255, 0.08);
+            color: #35d4d5;
         }
         .copydialog, .logindialog {
             display: none;
@@ -166,139 +319,163 @@
             inset: 0;
             width: 100%;
             height: 100%;
-            padding: 6px;
-            z-index: 1;
+            padding: 16px;
+            z-index: 100;
         }
         .copydialog.show, .logindialog.show {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .copydialog::before, .logindialog::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: black;
-            opacity: 0.3;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .copydialog__inner, .logindialog__inner {
             position: relative;
-            max-width: 960px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #eee;
-            padding: 8px;
+            max-width: 500px;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: #181924;
+            color: #f3f4f6;
+            padding: 20px;
             margin: auto;
-            height: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
         }
         .copydialog__title {
             display: flex;
             flex-wrap: nowrap;
             justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .copydialog__title h2, .logindialog form h2 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #f3f4f6;
+        }
+        .copydialog p, .logindialog p {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin: 0 0 16px 0;
         }
         .copydialog input {
             width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            color: #f3f4f6;
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            box-sizing: border-box;
         }
         .copydialog .close {
-            flex-shrink: 1;
+            flex-shrink: 0;
             all: unset;
             cursor: pointer;
-            align-self: start;
-            font-size: 2rem;
+            align-self: center;
+            font-size: 1.4rem;
             line-height: 1;
+            color: #9ca3af;
+            border-radius: 6px;
+            padding: 4px;
+            transition: color 0.12s ease;
         }
-        @media (min-width: 500px) {
-            .copydialog, .logindialog {
-                padding: 24px;
-            }
-            .copydialog__inner, .logindialog__inner {
-                padding: 12px 18px;
-                height: auto;
-            }
-        }
-
-        /* https://css-tricks.com/snippets/css/css-triangle/ */
-        .arrow-right {
-            display: inline-block;
-            width: 0;
-            height: 0;
-            border-top: 9px solid transparent;
-            border-bottom: 9px solid transparent;
-            border-left: 9px solid currentcolor;
+        .copydialog .close:hover {
+            color: #fff;
         }
 
         .logindialog .error {
-            margin: 8px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: 1px solid #b71c1c;
-            background-color: #c62828;
-            color: white;
+            margin-bottom: 12px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            font-size: 0.85rem;
         }
         .logindialog .error:empty {
             display: none;
         }
         .logindialog form label {
             cursor: pointer;
+            color: #9ca3af;
+            font-size: 0.85rem;
         }
         .logindialog form button {
             all: unset;
-            padding: 8px;
-            line-height: 1.75;
+            padding: 8px 16px;
             text-align: center;
-            min-width: 64px;
-            border-radius: 4px;
-            padding: 6px 8px;
-            color: rgb(91, 116, 239);
-            text-transform: uppercase;
-            letter-spacing: 0.02857em;
+            border-radius: 6px;
+            background: #35d4d5;
+            color: #12131a;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 140ms ease;
         }
         .logindialog form button:not([disabled]) {
             cursor: pointer;
         }
         .logindialog form button:not([disabled]):hover {
-            background-color: rgba(91, 116, 239, 0.08);
+            filter: brightness(1.1);
+        }
+        .logindialog form button:not([disabled]):active {
+            transform: scale(0.97);
         }
         .logindialog form input {
             all: unset;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.23);
-            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
             width: auto;
             min-width: 0;
+            color: #f3f4f6;
+            font-size: 0.875rem;
+            transition: border-color 140ms ease;
         }
         .logindialog form input:hover {
-            border-color: white;
+            border-color: rgba(255, 255, 255, 0.3);
         }
         .logindialog form input:focus {
-            border-color: rgb(91, 116, 239);
+            border-color: #35d4d5;
+            box-shadow: 0 0 0 2px rgba(53, 212, 213, 0.2);
         }
         .logindialog form .controls {
             display: grid;
             align-items: center;
             grid-template-columns: 1fr;
+            row-gap: 8px;
         }
         .logindialog form .controls > :nth-child(even):not(:last-child) {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .logindialog form .submit {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            margin-top: 24px;
+            align-items: flex-end;
+            margin-top: 20px;
         }
         .logindialog input:disabled, .logindialog button:disabled {
-            opacity: 0.7;
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         @media (min-width: 500px) {
             .logindialog form {
                 width: 100%;
-                max-width: 450px;
-                margin: 8px auto;
             }
             .logindialog form .controls {
                 grid-template-columns: auto 1fr;
                 column-gap: 16px;
-                row-gap: 6px;
+                row-gap: 12px;
             }
             .logindialog form .controls > :nth-child(even):not(:last-child) {
                 margin-bottom: 0px;
@@ -308,15 +485,44 @@
 </head>
 <body>
     <header>
-        <h1 id="title">${MR.strings.webview_label_title.localized(locale)}</h1>
+        <div class="header-left">
+            <svg class="header-logo" width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="50" fill="#35d4d5"/>
+                <circle cx="50" cy="50" r="39" fill="#1A1A1D"/>
+                <path d="m26.46 38.07 15.633-.27c3.348-.081 3.348-.081 4.482.783.783.972 1.161 1.701 1.404 2.916-.216 1.053-.567 1.593-1.242 2.403l-3.321 4.509c-.513.702-.513.702-.756 1.539.216.108.216.108.459.189 2.322 1.269 4.347 3.402 6.291 5.211l1.539 1.431c.459.621.594 1.053.621 1.809l-2.268 2.619c-.675.54-1.188.459-2.052.351-.702-.513-.702-.513-1.404-1.242l-3.861-3.996c-.81-.837-1.674-1.593-2.565-2.322-.972.459-1.62.999-2.376 1.728-7.29 6.723-7.29 6.723-10.206 6.615-1.161-.432-1.998-1.215-2.808-2.133-.27-.918-.27-.918-.27-1.62 1.08-.918 2.187-1.755 3.402-2.457 4.428-2.592 8.046-6.183 11.124-10.287 1.026-1.431 1.35-1.998 1.674-2.646l-12.15.054c-.54-.054-.54-.054-1.08-.594-.243-1.107-.27-2.16-.27-3.24l0-1.35z" fill="#fdfdfd"/>
+                <path d="m78.6486 37.8378 1.5405 1.5135c-.5405 8.027-5.4324 16.1892-10.8649 21.8378-1.4054 1.4324-1.8649 1.8919-3.0811 2.1081-.9459-.1892-1.6757-.4324-2.5405-.8378l-1.3514-.6757c-.1081-1.2162-.1081-1.2162.3243-1.8378l3.2432-3.0811c3.8919-3.8919 6.1892-9.2703 7.5135-14.5405h-11.6216v7.8378c-.6216.2973-.973.2973-1.6486.2973-3.7297 0-3.7297 0-4.027-.2973v-13.2432l18.4865-.2973c1.6216.027 2.8378.0541 4.027 1.2162z" fill="#f9f9f9"/>
+            </svg>
+            <h1 id="title">${MR.strings.webview_label_title.localized(locale)}</h1>
+        </div>
         <nav>
-            <form id="browseForm">
+            <form id="browseForm" class="url-omnibar">
+                <svg class="url-lock-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
                 <input type="text" id="url" name="url" placeholder="${MR.strings.webview_placeholder_url.localized(locale)}" disabled/>
-                <button type="submit" id="goButton" disabled><span class="arrow-right"></span></button>
+                <button type="submit" id="goButton" title="Navigate" disabled>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
             </form>
-            <label><input type="checkbox" id="reverseScroll" disabled/> ${MR.strings.webview_label_reversescroll.localized(locale)}</label>
         </nav>
-      <p><i>${MR.strings.webview_label_bindingshint.localized(locale)}</i></p>
+        <div class="header-right">
+            <label class="toggle-pill" title="${MR.strings.webview_label_reversescroll.localized(locale)}">
+                <input type="checkbox" id="reverseScroll" disabled/>
+                <span>${MR.strings.webview_label_reversescroll.localized(locale)}</span>
+            </label>
+            <div class="hint-badge" title="${MR.strings.webview_label_bindingshint.localized(locale)}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div class="hint-tooltip">${MR.strings.webview_label_bindingshint.localized(locale)}</div>
+            </div>
+        </div>
     </header>
     <main>
         <div class="message" id="message">${MR.strings.webview_label_init.localized(locale)}</div>
@@ -376,12 +582,16 @@
         const origTitle = document.title;
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
+        let currentRenderId = 0;
+        // whether a smooth scroll step was sent, that no frame was displayed for yet (see "smoothScrollTick")
+        let awaitingScrollFrame = false;
 
         function connectWs(socketUrl, token) {
             return new Promise((resolve, reject) => {
                 // we pass the token as the subprotocol, which is widely considered the best solution to passing tokens
                 // browsers don't support setting custom headers for WebSockets...
                 const socket = new WebSocket(socketUrl, token ? [token] : []);
+                socket.binaryType = 'blob';
                 const f = (msg) => {
                     console.debug('Connection active:', msg.data);
                     socket.removeEventListener('message', f);
@@ -431,6 +641,7 @@
                                 loginDiv.classList.remove('show');
                                 loginForm.querySelectorAll('input, button').forEach(i => i.disabled = true);
                                 const newSocket = new WebSocket(socketUrl, [newToken]);
+                                newSocket.binaryType = 'blob';
                                 newSocket.addEventListener('open', () => {
                                     resolve(newSocket);
                                 });
@@ -572,7 +783,56 @@
 
                 /// Server events
 
+                // Rendered frames arrive as binary websocket messages (jpeg), everything else as json text
+                // Tells the server that a frame was handled, so that it does not send frames faster than we can display
+                const ackFrame = () => {
+                    awaitingScrollFrame = false;
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send('{"type":"frameAck"}');
+                    }
+                };
+
+                const renderFrame = (data) => {
+                    const renderId = ++currentRenderId;
+                    const imgData = new Blob([data], { type: "image/jpeg" });
+                    if (window.createImageBitmap) {
+                        createImageBitmap(imgData).then(bmp => {
+                            // a newer frame was received while decoding this one, so drawing it would only be a step back
+                            if (renderId !== currentRenderId) {
+                                bmp.close();
+                                return;
+                            }
+                            if (frame.width !== bmp.width) frame.width = bmp.width;
+                            if (frame.height !== bmp.height) frame.height = bmp.height;
+                            ctx.drawImage(bmp, 0, 0);
+                            bmp.close();
+                        }).catch(() => {}).finally(ackFrame);
+                    } else {
+                        const img = new Image();
+                        const url = URL.createObjectURL(imgData);
+                        img.onload = () => {
+                            URL.revokeObjectURL(url);
+                            if (renderId === currentRenderId) {
+                                if (frame.width !== img.width) frame.width = img.width;
+                                if (frame.height !== img.height) frame.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                            }
+                            ackFrame();
+                        };
+                        img.onerror = () => {
+                            URL.revokeObjectURL(url);
+                            ackFrame();
+                        };
+                        img.src = url;
+                    }
+                };
+
                 socket.addEventListener('message', e => {
+                    if (typeof e.data !== 'string') {
+                        renderFrame(e.data);
+                        return;
+                    }
+
                     const obj = JSON.parse(e.data);
                     switch (obj.type) {
                         case "addressChange":
@@ -595,17 +855,10 @@
                             urlInput.value = obj.url;
                             setTitle(obj.title);
                         } break;
-                        case "render": {
-                            const img = new Image();
-                            const imgData = new Blob([new Uint8Array(obj.image)], { type: "image/png" });
-                            const url = URL.createObjectURL(imgData);
-                            img.addEventListener('load', e => {
-                                frame.width = img.width;
-                                frame.height = img.height;
-                                ctx.drawImage(img, 0, 0);
-                            });
-                            img.src = url;
-                        } break;
+                        case "cursor":
+                            // the autoscroll shows its own cursor
+                            if (!autoscroll) frameInput.style.cursor = obj.cursor;
+                            break;
                         case "consoleMessage": {
                             const lg = obj.severity == 4 ? console.error : obj.severity == 3 ? console.warn : console.log;
                             lg(obj.source + ':' + obj.line + ':', obj.message);
@@ -621,7 +874,7 @@
 
                 socket.addEventListener('close', e => {
                     if (e.wasClean) {
-                        console.log(`WebSocket connection closed cleanly, code=` + e.code + `, reason=` + e.reason);
+                        console.log("WebSocket connection closed cleanly, code=" + e.code + ", reason=" + e.reason);
                     } else {
                         console.error('WebSocket connection died', e);
                     }
@@ -641,6 +894,200 @@
                 });
                 observer.observe(frame);
 
+                let pendingMouseMove = null;
+                let mouseMoveTimer = null;
+
+                const sendPendingMouseMove = () => {
+                    mouseMoveTimer = null;
+                    if (pendingMouseMove && socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify(pendingMouseMove));
+                        pendingMouseMove = null;
+                    }
+                };
+
+                /// Smooth wheel scrolling
+                // The remote browser renders without smooth scrolling, so every wheel notch is a single big jump
+                // (which is only a handful of frames per second). Spreading the notch over several small steps turns it
+                // into a smooth movement, while the scrolled distance stays the same.
+
+                const SMOOTH_SCROLL_EASING = 0.3;
+                const SMOOTH_SCROLL_INTERVAL_MS = 16;
+                // steps produce no frame if nothing changed (e.g. at the end of the page), so do not wait forever for one
+                const SMOOTH_SCROLL_MAX_FRAME_WAIT_MS = 120;
+                let lastScrollStepAt = 0;
+                // "deltaMode" 1 (lines, used by e.g. Firefox) to pixels
+                const WHEEL_LINE_HEIGHT = 40;
+
+                let smoothScroll = null;
+
+                const sendWheel = (delta, x, y, shiftKey) => {
+                    socket.send(JSON.stringify({
+                        type: 'event',
+                        eventType: 'wheel',
+                        clickX: x,
+                        clickY: y,
+                        shiftKey,
+                        clientX: x,
+                        clientY: y,
+                        deltaY: delta,
+                    }));
+                };
+
+                const stopSmoothScroll = () => {
+                    if (!smoothScroll) return;
+                    clearInterval(smoothScroll.timer);
+                    smoothScroll = null;
+                };
+
+                const smoothScrollTick = () => {
+                    const state = smoothScroll;
+                    if (!state) return;
+
+                    // The remote browser can only render a limited number of frames per second, especially for heavy pages.
+                    // Sending the next step before the previous one showed up would only queue up steps, which makes the
+                    // scrolling lag behind (and continue after the wheel stopped), so the steps follow the displayed frames.
+                    if (awaitingScrollFrame && Date.now() - lastScrollStepAt < SMOOTH_SCROLL_MAX_FRAME_WAIT_MS) return;
+
+                    // ease out: a fraction of the remaining distance per step, finishing the last few pixels at once
+                    const step = Math.round(Math.abs(state.remaining) < 4 ? state.remaining : state.remaining * SMOOTH_SCROLL_EASING);
+                    state.remaining -= step;
+                    if (step) {
+                        sendWheel(step, state.x, state.y, state.shift);
+                        awaitingScrollFrame = true;
+                        lastScrollStepAt = Date.now();
+                    }
+                    if (Math.abs(state.remaining) < 0.5) stopSmoothScroll();
+                };
+
+                const smoothWheel = (e) => {
+                    const delta = (e.deltaMode === 1 ? e.deltaY * WHEEL_LINE_HEIGHT : e.deltaY)
+                        * (reverseToggle.checked ? -1 : 1);
+                    const rect = frame.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    // horizontal (shift) and vertical scrolling are separate wheel events for the browser
+                    if (smoothScroll && smoothScroll.shift !== e.shiftKey) {
+                        sendWheel(Math.round(smoothScroll.remaining), smoothScroll.x, smoothScroll.y, smoothScroll.shift);
+                        stopSmoothScroll();
+                    }
+                    if (!smoothScroll) {
+                        smoothScroll = { remaining: 0, shift: e.shiftKey, timer: setInterval(smoothScrollTick, SMOOTH_SCROLL_INTERVAL_MS) };
+                    }
+                    smoothScroll.remaining += delta;
+                    smoothScroll.x = x;
+                    smoothScroll.y = y;
+                };
+
+                /// Middle mouse button "free scroll" (autoscroll)
+                // Browsers only provide this for real pages, so it has to be done here: a middle click starts it, the
+                // distance of the mouse to the click position determines the scroll speed and direction, and any click,
+                // Escape or losing the focus stops it. Releasing the button after dragging away also stops it.
+
+                const AUTOSCROLL_DEADZONE = 12;
+                const AUTOSCROLL_SPEED = 0.15;
+                const AUTOSCROLL_INTERVAL_MS = 16;
+
+                let autoscroll = null;
+                let swallowNextMouseUp = false;
+                const lastMouse = { x: 0, y: 0 };
+
+                const stopAutoscroll = () => {
+                    if (!autoscroll) return;
+                    clearInterval(autoscroll.timer);
+                    autoscroll = null;
+                    frameInput.style.cursor = 'default';
+                };
+
+                const autoscrollDelta = (distance) =>
+                    Math.abs(distance) > AUTOSCROLL_DEADZONE
+                        ? Math.sign(distance) * (Math.abs(distance) - AUTOSCROLL_DEADZONE) * AUTOSCROLL_SPEED
+                        : 0;
+
+                const sendAutoscroll = (delta, horizontal) => {
+                    const rect = frame.getBoundingClientRect();
+                    socket.send(JSON.stringify({
+                        type: 'event',
+                        eventType: 'wheel',
+                        clickX: autoscroll.originX - rect.left,
+                        clickY: autoscroll.originY - rect.top,
+                        // horizontal scrolling is a wheel event with shift pressed
+                        shiftKey: horizontal,
+                        clientX: autoscroll.originX,
+                        clientY: autoscroll.originY,
+                        deltaY: delta,
+                    }));
+                };
+
+                const startAutoscroll = (e) => {
+                    lastMouse.x = e.clientX;
+                    lastMouse.y = e.clientY;
+                    autoscroll = {
+                        originX: e.clientX,
+                        originY: e.clientY,
+                        timer: setInterval(() => {
+                            const deltaX = autoscrollDelta(lastMouse.x - autoscroll.originX);
+                            const deltaY = autoscrollDelta(lastMouse.y - autoscroll.originY);
+                            if (deltaY) sendAutoscroll(deltaY, false);
+                            if (deltaX) sendAutoscroll(deltaX, true);
+                        }, AUTOSCROLL_INTERVAL_MS),
+                    };
+                    frameInput.style.cursor = 'all-scroll';
+                };
+
+                // returns true if the event was handled by the autoscroll
+                const handleAutoscrollEvent = (e) => {
+                    if (e.type === 'mousedown') {
+                        // any click stops it, the middle button starts it
+                        if (autoscroll || e.button === 1) {
+                            const wasActive = !!autoscroll;
+                            stopAutoscroll();
+                            if (!wasActive) startAutoscroll(e);
+                            swallowNextMouseUp = true;
+                            return true;
+                        }
+                    } else if (e.type === 'mouseup') {
+                        if (autoscroll && e.button === 1) {
+                            const distance = Math.hypot(e.clientX - autoscroll.originX, e.clientY - autoscroll.originY);
+                            if (distance > AUTOSCROLL_DEADZONE) stopAutoscroll();
+                        }
+                        if (swallowNextMouseUp) {
+                            swallowNextMouseUp = false;
+                            return true;
+                        }
+                    } else if (e.type === 'keydown' && e.key === 'Escape' && autoscroll) {
+                        stopAutoscroll();
+                        return true;
+                    }
+                    return false;
+                };
+
+                frameInput.addEventListener('blur', stopAutoscroll);
+
+                const handleMouseMove = (e) => {
+                    lastMouse.x = e.clientX;
+                    lastMouse.y = e.clientY;
+                    const rect = frame.getBoundingClientRect();
+                    const clickX = e.clientX !== undefined ? e.clientX - rect.left : 0;
+                    const clickY = e.clientY !== undefined ? e.clientY - rect.top : 0;
+                    pendingMouseMove = {
+                        type: 'event',
+                        eventType: 'mousemove',
+                        clickX,
+                        clickY,
+                        button: e.button,
+                        ctrlKey: e.ctrlKey,
+                        shiftKey: e.shiftKey,
+                        altKey: e.altKey,
+                        metaKey: e.metaKey,
+                        clientX: e.clientX,
+                        clientY: e.clientY,
+                    };
+                    if (!mouseMoveTimer) {
+                        mouseMoveTimer = setTimeout(sendPendingMouseMove, 30);
+                    }
+                };
+
                 const frameEvent = (e) => {
                     // Chrome Android bug, see input below
                     if (e.key === "Unidentified") return;
@@ -655,6 +1102,11 @@
                         return;
                     }
                     e.preventDefault();
+                    if (handleAutoscrollEvent(e)) return;
+                    if (e.type === "wheel" && !e.ctrlKey && typeof e.deltaY === 'number') {
+                        smoothWheel(e);
+                        return;
+                    }
                     if (e.type === "mousedown" && contextMenuDiv.classList.contains('show')) {
                         console.log('remove context menu');
                         contextMenuDiv.classList.remove('show');
@@ -662,6 +1114,9 @@
                     }
                     // right-click, handled in contextmenu below
                     if (e.type === "mousedown" && e.button === 2) return;
+                    if (pendingMouseMove) {
+                        sendPendingMouseMove();
+                    }
                     const rect = frame.getBoundingClientRect();
                     const clickX = e.clientX !== undefined ? e.clientX - rect.left : 0;
                     const clickY = e.clientY !== undefined ? e.clientY - rect.top : 0;
@@ -685,12 +1140,24 @@
 
                 const attachEvents = () => {
                     console.log('Attaching event handlers to new document');
-                    const events = ["mousedown", "mouseup", "mousemove", "wheel", "keydown", "keyup"];
+                    const events = ["mousedown", "mouseup", "wheel", "keydown", "keyup"];
                     for (const ev of events) {
                         frameInput.addEventListener(ev, frameEvent, false);
                     }
+                    frameInput.addEventListener("mousemove", handleMouseMove, { passive: true });
 
                     let touch = undefined;
+                    let pendingTouchMove = null;
+                    let touchMoveTimer = null;
+
+                    const sendPendingTouchMove = () => {
+                        touchMoveTimer = null;
+                        if (pendingTouchMove && socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify(pendingTouchMove));
+                            pendingTouchMove = null;
+                        }
+                    };
+
                     frameInput.addEventListener('touchstart', e => {
                         if (e.touches.length === 1) {
                             touch = e.touches[0];
@@ -698,6 +1165,7 @@
                     }, false);
                     frameInput.addEventListener('touchend', e => {
                         touch = undefined;
+                        if (pendingTouchMove) sendPendingTouchMove();
                     }, false);
                     frameInput.addEventListener('touchmove', e => {
                         if (e.touches.length === 1 && touch !== undefined) {
@@ -705,8 +1173,7 @@
                             let deltaX = touch.pageX - e.touches[0].pageX;
                             let deltaY = touch.pageY - e.touches[0].pageY;
                             if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                                // assume horizontal scroll
-                                socket.send(JSON.stringify({
+                                pendingTouchMove = {
                                     type: 'event',
                                     eventType: 'wheel',
                                     clickX: e.touches[0].pageX,
@@ -715,9 +1182,9 @@
                                     clientX: e.touches[0].clientX,
                                     clientY: e.touches[0].clientY,
                                     deltaY: deltaX,
-                                }));
+                                };
                             } else {
-                                socket.send(JSON.stringify({
+                                pendingTouchMove = {
                                     type: 'event',
                                     eventType: 'wheel',
                                     clickX: e.touches[0].pageX,
@@ -725,9 +1192,12 @@
                                     clientX: e.touches[0].clientX,
                                     clientY: e.touches[0].clientY,
                                     deltaY: deltaY,
-                                }));
+                                };
                             }
                             touch = e.touches[0];
+                            if (!touchMoveTimer) {
+                                touchMoveTimer = setTimeout(sendPendingTouchMove, 30);
+                            }
                         }
                     }, false);
                     // known bug on Chrome Android:

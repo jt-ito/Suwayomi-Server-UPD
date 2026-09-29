@@ -1134,6 +1134,14 @@ class ServerConfig(
         description = "Skips the metadata feed and provides download/stream links directly in the chapter list. Improves compatibility with KOReader auto-downloader. KoSync strategies are applied, but PROMPT conflicts are ignored (treating local progress as priority)."
     )
 
+    val webViewAdBlockEnabled: MutableStateFlow<Boolean> by BooleanSetting(
+        protoNumber = 98,
+        group = SettingGroup.WEB_VIEW,
+        privacySafe = true,
+        defaultValue = true,
+        description = "Block requests to known ad and tracker domains in the WebView. Makes pages load faster, but can occasionally break a site.",
+    )
+
     val extensionStores: MutableStateFlow<List<String>> by ListSetting<String>(
         protoNumber = 97,
         group = SettingGroup.EXTENSION,

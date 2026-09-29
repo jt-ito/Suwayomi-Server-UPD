@@ -67,8 +67,10 @@ server.webUISubpath = ""
 ### webView
 ```
 server.kcefEnabled = true
+server.webViewAdBlockEnabled = true
 ```
 - `server.kcefEnabled` controls if KCEF WebView provider is enabled.
+- `server.webViewAdBlockEnabled` controls if requests to known ad and tracker domains are blocked in the WebView. The blocklist (a community maintained hosts file) is downloaded on first use and refreshed weekly. Challenge/login providers (Cloudflare, Google, reCAPTCHA, hCaptcha) are never blocked.
 
 
 ### Downloader
