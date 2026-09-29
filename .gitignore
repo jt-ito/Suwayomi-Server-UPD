@@ -3,6 +3,8 @@
 .idea
 gradle.properties
 .fleet
+skills/
+AGENTS.md
 # But we need these
 !.idea/runConfigurations
 .kotlin
