@@ -43,6 +43,7 @@ import suwayomi.tachidesk.manga.impl.extension.ExtensionStoreService
 import suwayomi.tachidesk.manga.impl.update.IUpdater
 import suwayomi.tachidesk.manga.impl.update.Updater
 import suwayomi.tachidesk.manga.impl.util.lang.renameTo
+import suwayomi.tachidesk.server.database.DatabaseMigrationService
 import suwayomi.tachidesk.server.database.databaseUp
 import suwayomi.tachidesk.server.generated.BuildConfig
 import suwayomi.tachidesk.server.settings.SettingsRegistry
@@ -122,6 +123,7 @@ data class DatabaseSettings(
     val databaseUsername: String,
     val databasePassword: String,
     val useHikariConnectionPool: Boolean,
+    val useEmbeddedPostgres: Boolean,
 )
 
 val androidCompat by lazy { AndroidCompat() }
@@ -349,6 +351,7 @@ fun applicationSetup() {
             serverConfig.databaseUsername,
             serverConfig.databasePassword,
             serverConfig.useHikariConnectionPool,
+            serverConfig.useEmbeddedPostgres,
         ) { vargs ->
             DatabaseSettings(
                 vargs[0] as DatabaseType,
@@ -356,11 +359,21 @@ fun applicationSetup() {
                 vargs[2] as String,
                 vargs[3] as String,
                 vargs[4] as Boolean,
+                vargs[5] as Boolean,
             )
         }.distinctUntilChanged(),
-        { (databaseType, databaseUrl, _databaseUsername, _databasePassword, hikariCp) ->
+        { (databaseType, databaseUrl, _databaseUsername, _databasePassword, hikariCp, embedded) ->
+            // A migration already calls databaseUp() itself and copies data under its own control - running
+            // this listener's databaseUp()/LocalSource.register() concurrently races the migration's copy loop
+            // (e.g. LocalSource.register() re-inserting the "Local Source" extension row it just cleared).
+            if (DatabaseMigrationService.isMigrating) {
+                logger.debug { "Database settings changed during a migration - skipping reactive setup, the migration handles it" }
+                return@subscribeTo
+            }
+
             logger.info {
-                "Database changed - type=$databaseType url=$databaseUrl, username=[REDACTED], password=[REDACTED], hikaricp=$hikariCp"
+                "Database changed - type=$databaseType url=$databaseUrl, username=[REDACTED], password=[REDACTED], " +
+                    "hikaricp=$hikariCp, embedded=$embedded"
             }
             databaseUp()
 

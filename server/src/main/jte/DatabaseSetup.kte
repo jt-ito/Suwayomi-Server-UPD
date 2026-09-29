@@ -1,0 +1,1507 @@
+@import suwayomi.tachidesk.server.database.DatabaseStats
+
+@param stats: DatabaseStats
+@param defaultHost: String
+@param defaultPort: Int
+@param defaultDatabase: String
+@param defaultUsername: String
+@param version: String
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Engine — Suwayomi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #09090b;
+            --surface: #121215;
+            --surface-raised: #18181b;
+            --surface-hover: #222226;
+            --border: #27272a;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focus: #52525b;
+            --text: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --emerald: #10b981;
+            --emerald-bg: rgba(16, 185, 129, 0.08);
+            --emerald-border: rgba(16, 185, 129, 0.22);
+            --amber: #f59e0b;
+            --amber-bg: rgba(245, 158, 11, 0.08);
+            --amber-border: rgba(245, 158, 11, 0.22);
+            --rose: #f43f5e;
+            --rose-bg: rgba(244, 63, 94, 0.08);
+            --rose-border: rgba(244, 63, 94, 0.22);
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Top Navigation Header */
+        header {
+            border-bottom: 1px solid var(--border-subtle);
+            background-color: rgba(9, 9, 11, 0.85);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+        }
+
+        .brand-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 140ms var(--ease);
+        }
+
+        .brand-link:hover {
+            color: var(--text);
+        }
+
+        .brand-mark {
+            width: 20px;
+            height: 20px;
+            color: var(--text);
+        }
+
+        .separator {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .current-page {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .version-pill {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--surface-raised);
+            border: 1px solid var(--border-subtle);
+            padding: 2px 7px;
+            border-radius: var(--radius-sm);
+        }
+
+        .nav-back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            background: var(--surface);
+            transition: all 140ms var(--ease);
+        }
+
+        .nav-back-link:hover {
+            color: var(--text);
+            background: var(--surface-raised);
+            border-color: var(--border);
+        }
+
+        .nav-back-link:active {
+            transform: scale(0.98);
+        }
+
+        /* Main Container */
+        main {
+            flex: 1;
+            max-width: 960px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 36px 24px 64px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Status Callout Banner */
+        .status-callout {
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            border: 1px solid transparent;
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .status-callout.active-postgres {
+            background-color: var(--emerald-bg);
+            border-color: var(--emerald-border);
+        }
+
+        .status-callout.active-h2 {
+            background-color: var(--amber-bg);
+            border-color: var(--amber-border);
+        }
+
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .status-callout.active-postgres .status-icon {
+            color: var(--emerald);
+        }
+
+        .status-callout.active-h2 .status-icon {
+            color: var(--amber);
+        }
+
+        .status-content {
+            flex: 1;
+        }
+
+        .status-header-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .status-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text);
+        }
+
+        .pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .pill-badge.badge-postgres {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--emerald);
+            border: 1px solid var(--emerald-border);
+        }
+
+        .pill-badge.badge-h2 {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--amber);
+            border: 1px solid var(--amber-border);
+        }
+
+        .status-description {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .status-meta {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            color: var(--text-muted);
+        }
+
+        /* Metric Tiles */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
+        }
+
+        .metric-label {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 1.45rem;
+            font-weight: 500;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        /* Panel Container */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .panel-header {
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.015em;
+            margin-bottom: 4px;
+        }
+
+        .panel-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Form Controls */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-input {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 9px 12px;
+            color: var(--text);
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+        }
+
+        .form-input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 1px var(--border-focus);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .label-action-btn {
+            background: none;
+            border: none;
+            color: var(--emerald);
+            font-family: 'Geist', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            transition: all 140ms var(--ease);
+        }
+
+        .label-action-btn:hover {
+            background: var(--emerald-bg);
+        }
+
+        .label-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .input-action-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-action-wrapper .form-input {
+            width: 100%;
+            padding-right: 36px;
+        }
+
+        .input-inline-btn {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            transition: color 140ms var(--ease);
+        }
+
+        .input-inline-btn:hover {
+            color: var(--text);
+        }
+
+        /* Checkbox Switch */
+        .checkbox-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 0;
+            height: 38px;
+        }
+
+        .checkbox-native {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+
+        .checkbox-box {
+            width: 18px;
+            height: 18px;
+            border-radius: var(--radius-sm);
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background-color 140ms var(--ease), border-color 140ms var(--ease), transform 140ms var(--ease);
+        }
+
+        .checkbox-svg {
+            width: 12px;
+            height: 12px;
+            color: #09090b;
+            opacity: 0;
+            transform: scale(0.65);
+            transition: opacity 120ms var(--ease), transform 120ms var(--ease);
+        }
+
+        .checkbox-native:checked + .checkbox-box {
+            background: var(--emerald);
+            border-color: var(--emerald);
+        }
+
+        .checkbox-native:checked + .checkbox-box .checkbox-svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .checkbox-native:focus-visible + .checkbox-box {
+            box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--border-focus);
+        }
+
+        .checkbox-row:active .checkbox-box {
+            transform: scale(0.92);
+        }
+
+        .checkbox-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Action Buttons */
+        .action-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            cursor: pointer;
+            transition: background-color 140ms var(--ease), border-color 140ms var(--ease), transform 140ms var(--ease), opacity 140ms var(--ease);
+            border: 1px solid transparent;
+            text-decoration: none;
+            line-height: 1.2;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary {
+            background: #f4f4f5;
+            color: #09090b;
+            border-color: #f4f4f5;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #e4e4e7;
+            border-color: #e4e4e7;
+        }
+
+        .btn-secondary {
+            background: var(--surface-raised);
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--surface-hover);
+            border-color: var(--border-focus);
+        }
+
+        /* Status Toast Box */
+        .status-alert {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            border: 1px solid;
+            line-height: 1.45;
+        }
+
+        .status-alert.show {
+            display: block;
+        }
+
+        .status-alert.success {
+            background: var(--emerald-bg);
+            border-color: var(--emerald-border);
+            color: #34d399;
+        }
+
+        .status-alert.error {
+            background: var(--rose-bg);
+            border-color: var(--rose-border);
+            color: #fb7185;
+        }
+
+        .status-alert.info {
+            background: var(--surface-raised);
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* Terminal Console */
+        .terminal-panel {
+            display: none;
+            margin-top: 20px;
+            background: #050507;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #0d0d11;
+            border-bottom: 1px solid var(--border);
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .terminal-indicator {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--amber);
+        }
+
+        .terminal-indicator.done {
+            background: var(--emerald);
+        }
+
+        .terminal-progress-track {
+            height: 2px;
+            background: #18181b;
+            width: 100%;
+        }
+
+        .terminal-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--emerald);
+            transition: width 240ms var(--ease);
+        }
+
+        .terminal-body {
+            padding: 14px;
+            max-height: 220px;
+            overflow-y: auto;
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: #d4d4d8;
+        }
+
+        .terminal-line {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .terminal-time {
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+
+        /* Collapsible Docker Box */
+        .collapsible {
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
+        }
+
+        .collapsible summary {
+            padding: 16px 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: color 140ms var(--ease);
+        }
+
+        .collapsible summary:hover {
+            color: var(--text);
+        }
+
+        .collapsible summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .collapsible-inner {
+            padding: 0 20px 20px 20px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: -1px;
+        }
+
+        .collapsible-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 14px 0 10px 0;
+            line-height: 1.5;
+        }
+
+        .code-snippet-wrapper {
+            background: #050507;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .code-snippet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #0c0c10;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .code-snippet-tag {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .code-snippet-scroll {
+            overflow-x: auto;
+            padding: 14px 16px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .code-snippet-scroll::-webkit-scrollbar {
+            height: 5px;
+        }
+
+        .code-snippet-scroll::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+
+        .code-snippet-scroll::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .code-snippet-scroll code {
+            display: inline-block;
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.8rem;
+            color: #e4e4e7;
+            white-space: nowrap;
+            text-align: left;
+            margin: 0;
+            padding: 0;
+        }
+
+        .copy-pill {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-family: 'Geist', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 140ms var(--ease);
+        }
+
+        .copy-pill:hover {
+            background: var(--surface-hover);
+            color: var(--text);
+            border-color: var(--border-focus);
+        }
+
+        .copy-pill:active {
+            transform: scale(0.96);
+        }
+
+        .copy-pill.copied {
+            color: var(--emerald);
+            border-color: var(--emerald-border);
+        }
+
+        .code-action-btn {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-family: 'Geist', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 140ms var(--ease);
+        }
+
+        .code-action-btn:hover {
+            background: var(--surface-hover);
+            color: var(--text);
+            border-color: var(--border-focus);
+        }
+
+        .code-action-btn:active {
+            transform: scale(0.96);
+        }
+
+        .docker-pwd-badge {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.68rem;
+            color: var(--emerald);
+            background: var(--emerald-bg);
+            border: 1px solid var(--emerald-border);
+            padding: 1px 6px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            border-top-color: currentColor;
+            animation: spin 600ms linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <div class="breadcrumb">
+                <a href="/" class="brand-link">
+                    <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                    <span>Suwayomi</span>
+                </a>
+                <span class="separator">/</span>
+                <span class="current-page">Database Engine</span>
+                <span class="version-pill">${version}</span>
+            </div>
+            <a href="/" class="nav-back-link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Back to Library</span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Status Callout -->
+        @if (stats.isPostgreSQL)
+            <div class="status-callout active-postgres">
+                <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <div class="status-content">
+                    <div class="status-header-row">
+                        <span class="status-title">PostgreSQL Primary Active</span>
+                        @if (stats.isEmbedded)
+                            <span class="pill-badge badge-postgres">Built in</span>
+                        @else
+                            <span class="pill-badge badge-postgres">Online</span>
+                        @endif
+                    </div>
+                    <p class="status-description">
+                        @if (stats.isEmbedded)
+                            The server is running its own bundled PostgreSQL instance - no external database or Docker container needed.
+                        @else
+                            The server is operating on PostgreSQL with concurrent connection pooling, multi-client transactions, and zero lock contention.
+                        @endif
+                    </p>
+                    <div class="status-meta">Endpoint: ${stats.currentUrl}</div>
+                </div>
+            </div>
+        @else
+            <div class="status-callout active-h2">
+                <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <div class="status-content">
+                    <div class="status-header-row">
+                        <span class="status-title">Embedded H2 Engine Active</span>
+                        <span class="pill-badge badge-h2">Embedded</span>
+                    </div>
+                    <p class="status-description">H2 is currently running as an embedded single-file storage. For larger libraries and background sync workers, upgrading to PostgreSQL improves read/write concurrency and prevents database lock timeouts.</p>
+                </div>
+            </div>
+        @endif
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Manga in Library</div>
+                <div class="metric-value">${stats.mangaCount}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Chapters</div>
+                <div class="metric-value">${stats.chapterCount}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Categories</div>
+                <div class="metric-value">${stats.categoryCount}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Read History</div>
+                <div class="metric-value">${stats.historyCount}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Track Records</div>
+                <div class="metric-value">${stats.trackRecordCount}</div>
+            </div>
+        </div>
+
+        @if (!stats.isPostgreSQL)
+            <!-- Built-in PostgreSQL Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Built-in PostgreSQL <span class="pill-badge badge-postgres" style="margin-left: 8px;">Recommended</span></h2>
+                    <p class="panel-subtitle">The server runs its own bundled PostgreSQL instance for you - no external database, account, or Docker container required. Your data lives in this app's own data folder and survives restarts.</p>
+                </div>
+                <div class="action-row">
+                    <button type="button" id="embeddedMigrateBtn" class="btn btn-primary" onclick="handleStartEmbeddedMigration()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 3 21 3 21 8"></polyline>
+                            <line x1="4" y1="20" x2="21" y2="3"></line>
+                            <polyline points="21 16 21 21 16 21"></polyline>
+                            <line x1="15" y1="15" x2="21" y2="21"></line>
+                            <line x1="4" y1="4" x2="9" y2="9"></line>
+                        </svg>
+                        <span>Switch to Built-in PostgreSQL</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        @if (stats.isPostgreSQL)
+            <!-- Migrate back to H2 Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">Switch back to H2</h2>
+                    <p class="panel-subtitle">Copies everything out of the currently active PostgreSQL into a fresh embedded H2 file and activates it. The PostgreSQL data itself is left untouched, only read from.</p>
+                </div>
+                <div class="action-row">
+                    <button type="button" id="toH2Btn" class="btn btn-secondary" onclick="handleMigrateToH2()">
+                        <span>Switch to H2</span>
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        <!-- PostgreSQL Migration Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Connect to Your Own PostgreSQL</h2>
+                <p class="panel-subtitle">Already run your own PostgreSQL server elsewhere? Configure the connection here. You can test connectivity before initiating the automated schema setup and row copy.</p>
+            </div>
+
+            <form id="dbForm" onsubmit="return false;">
+                <div class="form-grid">
+                    <div class="form-item">
+                        <label class="form-label" for="host">Host / IP</label>
+                        <input class="form-input" type="text" id="host" value="${defaultHost}" placeholder="localhost" required />
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label" for="port">Port</label>
+                        <input class="form-input" type="number" id="port" value="${defaultPort}" placeholder="5432" required />
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label" for="databaseName">Database</label>
+                        <input class="form-input" type="text" id="databaseName" value="${defaultDatabase}" placeholder="suwayomi" required />
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label" for="username">Username</label>
+                        <input class="form-input" type="text" id="username" value="${defaultUsername}" placeholder="postgres" required />
+                    </div>
+                    <div class="form-item">
+                        <div class="form-label-row">
+                            <label class="form-label" for="password">Password</label>
+                            <button type="button" class="label-action-btn" onclick="generateFormPassword()" title="Generate secure 24-character password">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                <span>Generate</span>
+                            </button>
+                        </div>
+                        <div class="input-action-wrapper">
+                            <input class="form-input" type="password" id="password" placeholder="••••••••" />
+                            <button type="button" class="input-inline-btn" id="togglePasswordBtn" onclick="togglePasswordVisibility()" title="Show/hide password" aria-label="Toggle password visibility">
+                                <svg id="eyeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label" for="useHikari">Connection Pool</label>
+                        <label class="checkbox-row" for="useHikari">
+                            <input class="checkbox-native" type="checkbox" id="useHikari" checked />
+                            <span class="checkbox-box" aria-hidden="true">
+                                <svg class="checkbox-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3.5 8.5 6.5 11.5 12.5 5.5"></polyline>
+                                </svg>
+                            </span>
+                            <span class="checkbox-label">Enable HikariCP pooling</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <button type="button" id="testBtn" class="btn btn-secondary" onclick="handleTestConnection()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                        </svg>
+                        <span>Test Connection</span>
+                    </button>
+                    <button type="button" id="migrateBtn" class="btn btn-primary" onclick="handleStartMigration()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 3 21 3 21 8"></polyline>
+                            <line x1="4" y1="20" x2="21" y2="3"></line>
+                            <polyline points="21 16 21 21 16 21"></polyline>
+                            <line x1="15" y1="15" x2="21" y2="21"></line>
+                            <line x1="4" y1="4" x2="9" y2="9"></line>
+                        </svg>
+                        <span>Start Migration</span>
+                    </button>
+                </div>
+            </form>
+
+            <div id="statusAlert" class="status-alert"></div>
+
+            <div id="terminalPanel" class="terminal-panel">
+                <div class="terminal-header">
+                    <div class="terminal-title">
+                        <span id="terminalIndicator" class="terminal-indicator"></span>
+                        <span id="terminalTitle">Migration Progress</span>
+                    </div>
+                    <span id="terminalPercent" style="font-family: 'Geist Mono', monospace; font-size: 0.75rem; color: var(--text-muted);">0%</span>
+                </div>
+                <div class="terminal-progress-track">
+                    <div id="terminalProgressBar" class="terminal-progress-bar"></div>
+                </div>
+                <div id="terminalBody" class="terminal-body"></div>
+            </div>
+        </div>
+
+        <!-- Docker Instructions Accordion -->
+        <details class="collapsible">
+            <summary>
+                <span>Need a local PostgreSQL container? Run with Docker</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </summary>
+            <div class="collapsible-inner">
+                <p class="collapsible-text">Execute the following command to deploy a persistent PostgreSQL 16 container configured with default credentials matching this form:</p>
+                <div class="code-snippet-wrapper">
+                    <div class="code-snippet-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="code-snippet-tag">bash</span>
+                            <span id="dockerPasswordBadge" class="docker-pwd-badge" style="display: none;">custom password</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="code-action-btn" onclick="generateDockerPassword()" title="Generate secure 24-character password for Docker command">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                                <span>Generate Password</span>
+                            </button>
+                            <button class="copy-pill" id="copyBtn" onclick="handleCopySnippet('dockerCmd')">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span id="copyBtnText">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="code-snippet-scroll"><code id="dockerCmd">docker run -d --name suwayomi-postgres -p 5432:5432 -e POSTGRES_DB=suwayomi -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -v postgres_data:/var/lib/postgresql/data postgres:16-alpine</code></div>
+                </div>
+            </div>
+        </details>
+    </main>
+
+    <footer>
+        Suwayomi-Server &bull; Database Engine Management &bull; Open Source
+    </footer>
+
+    <script>
+        function getParams() {
+            return {
+                host: document.getElementById('host').value.trim(),
+                port: parseInt(document.getElementById('port').value.trim()) || 5432,
+                databaseName: document.getElementById('databaseName').value.trim(),
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                useHikariPool: document.getElementById('useHikari').checked
+            };
+        }
+
+        function showAlert(message, type) {
+            var box = document.getElementById('statusAlert');
+            box.className = 'status-alert show ' + type;
+            box.innerHTML = message;
+        }
+
+        function appendLog(message) {
+            var body = document.getElementById('terminalBody');
+            var now = new Date();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+            var timeStr = hours + ':' + minutes + ':' + seconds;
+
+            var line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.innerHTML = '<span class="terminal-time">[' + timeStr + ']</span>' + message;
+            body.appendChild(line);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function handleTestConnection() {
+            var btn = document.getElementById('testBtn');
+            var originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span><span>Connecting...</span>';
+            showAlert('Testing PostgreSQL connectivity...', 'info');
+
+            try {
+                var response = await fetch('/api/v1/database/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getParams())
+                });
+
+                var data = await response.json();
+                if (response.ok && data.success) {
+                    var ver = data.databaseVersion ? ' (' + data.databaseVersion + ')' : '';
+                    showAlert('<strong>Connection established.</strong> ' + (data.message || 'Ready for migration') + ver, 'success');
+                } else {
+                    showAlert('<strong>Connection failed.</strong> ' + (data.message || 'Unable to connect with supplied parameters.'), 'error');
+                }
+            } catch (err) {
+                showAlert('<strong>Network error.</strong> ' + (err.message || 'Failed to reach server'), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+
+        async function handleStartMigration() {
+            var totalManga = ${stats.mangaCount};
+            var confirmText = totalManga > 0
+                ? 'Initiate migration of ' + totalManga + ' manga and all related records to PostgreSQL? An automatic backup of H2 will be created prior to transfer.'
+                : 'Configure and activate PostgreSQL as the primary database?';
+
+            if (!confirm(confirmText)) {
+                return;
+            }
+
+            var testBtn = document.getElementById('testBtn');
+            var migrateBtn = document.getElementById('migrateBtn');
+            testBtn.disabled = true;
+            migrateBtn.disabled = true;
+
+            var terminalPanel = document.getElementById('terminalPanel');
+            var terminalTitle = document.getElementById('terminalTitle');
+            var terminalIndicator = document.getElementById('terminalIndicator');
+            var terminalProgressBar = document.getElementById('terminalProgressBar');
+            var terminalPercent = document.getElementById('terminalPercent');
+            var terminalBody = document.getElementById('terminalBody');
+
+            terminalPanel.style.display = 'block';
+            terminalIndicator.className = 'terminal-indicator';
+            terminalProgressBar.style.width = '15%';
+            terminalPercent.innerText = '15%';
+            terminalTitle.innerText = 'Creating H2 snapshot...';
+            terminalBody.innerHTML = '';
+
+            appendLog('Starting migration pipeline...');
+            appendLog('Step 1: Validating target PostgreSQL credentials and creating H2 backup snapshot...');
+
+            try {
+                terminalProgressBar.style.width = '45%';
+                terminalPercent.innerText = '45%';
+                terminalTitle.innerText = 'Transferring database records...';
+                appendLog('Step 2: Initializing PostgreSQL schema & executing migrations...');
+                appendLog('Step 3: Transferring tables in topological order...');
+
+                var response = await fetch('/api/v1/database/migrate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(getParams())
+                });
+
+                var result = await response.json();
+
+                if (response.ok && result.success) {
+                    terminalProgressBar.style.width = '100%';
+                    terminalPercent.innerText = '100%';
+                    terminalIndicator.className = 'terminal-indicator done';
+                    terminalTitle.innerText = 'Migration complete';
+                    appendLog('Step 4: Re-enabling constraints and syncing identity sequences...');
+                    appendLog('Step 5: PostgreSQL activated as primary database backend.');
+
+                    if (result.details) {
+                        for (var key in result.details) {
+                            if (result.details.hasOwnProperty(key)) {
+                                appendLog('  &bull; ' + key + ': ' + result.details[key] + ' rows');
+                            }
+                        }
+                    }
+
+                    showAlert('<strong>Migration complete.</strong> Database transitioned to PostgreSQL successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                } else {
+                    terminalProgressBar.style.background = 'var(--rose)';
+                    terminalTitle.innerText = 'Migration failed';
+                    appendLog('ERROR: ' + (result.message || 'Unknown migration error'));
+                    showAlert('<strong>Migration failed.</strong> ' + (result.message || 'An error occurred during transfer.'), 'error');
+                }
+            } catch (err) {
+                terminalProgressBar.style.background = 'var(--rose)';
+                terminalTitle.innerText = 'Migration error';
+                appendLog('FATAL: ' + err.message);
+                showAlert('<strong>Error:</strong> ' + err.message, 'error');
+            } finally {
+                testBtn.disabled = false;
+                migrateBtn.disabled = false;
+            }
+        }
+
+        async function handleStartEmbeddedMigration() {
+            var totalManga = ${stats.mangaCount};
+            var confirmText = totalManga > 0
+                ? 'Start the built-in PostgreSQL and migrate ' + totalManga + ' manga and all related records to it? An automatic backup of H2 will be created prior to transfer.'
+                : 'Start the built-in PostgreSQL and activate it as the primary database?';
+
+            if (!confirm(confirmText)) {
+                return;
+            }
+
+            var btn = document.getElementById('embeddedMigrateBtn');
+            btn.disabled = true;
+
+            var terminalPanel = document.getElementById('terminalPanel');
+            var terminalTitle = document.getElementById('terminalTitle');
+            var terminalIndicator = document.getElementById('terminalIndicator');
+            var terminalProgressBar = document.getElementById('terminalProgressBar');
+            var terminalPercent = document.getElementById('terminalPercent');
+            var terminalBody = document.getElementById('terminalBody');
+
+            terminalPanel.style.display = 'block';
+            terminalIndicator.className = 'terminal-indicator';
+            terminalProgressBar.style.width = '15%';
+            terminalProgressBar.style.background = '';
+            terminalPercent.innerText = '15%';
+            terminalTitle.innerText = 'Starting built-in PostgreSQL...';
+            terminalBody.innerHTML = '';
+
+            appendLog('Starting migration pipeline...');
+            appendLog('Step 1: Creating H2 backup snapshot and starting the bundled PostgreSQL instance...');
+
+            try {
+                terminalProgressBar.style.width = '45%';
+                terminalPercent.innerText = '45%';
+                terminalTitle.innerText = 'Transferring database records...';
+                appendLog('Step 2: Initializing schema & executing migrations...');
+                appendLog('Step 3: Transferring tables in topological order...');
+
+                var response = await fetch('/api/v1/database/migrate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ useEmbedded: true })
+                });
+
+                var result = await response.json();
+
+                if (response.ok && result.success) {
+                    terminalProgressBar.style.width = '100%';
+                    terminalPercent.innerText = '100%';
+                    terminalIndicator.className = 'terminal-indicator done';
+                    terminalTitle.innerText = 'Migration complete';
+                    appendLog('Step 4: Re-enabling constraints and syncing identity sequences...');
+                    appendLog('Step 5: Built-in PostgreSQL activated as primary database backend.');
+
+                    if (result.details) {
+                        for (var key in result.details) {
+                            if (result.details.hasOwnProperty(key)) {
+                                appendLog('  &bull; ' + key + ': ' + result.details[key] + ' rows');
+                            }
+                        }
+                    }
+
+                    showAlert('<strong>Migration complete.</strong> Database transitioned to the built-in PostgreSQL successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                } else {
+                    terminalProgressBar.style.background = 'var(--rose)';
+                    terminalTitle.innerText = 'Migration failed';
+                    appendLog('ERROR: ' + (result.message || 'Unknown migration error'));
+                    showAlert('<strong>Migration failed.</strong> ' + (result.message || 'An error occurred during transfer.'), 'error');
+                }
+            } catch (err) {
+                terminalProgressBar.style.background = 'var(--rose)';
+                terminalTitle.innerText = 'Migration error';
+                appendLog('FATAL: ' + err.message);
+                showAlert('<strong>Error:</strong> ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function handleMigrateToH2() {
+            if (!confirm('Copy everything from PostgreSQL back into a fresh H2 file and activate it? PostgreSQL itself is left untouched, only read from.')) {
+                return;
+            }
+
+            var btn = document.getElementById('toH2Btn');
+            btn.disabled = true;
+
+            var terminalPanel = document.getElementById('terminalPanel');
+            var terminalTitle = document.getElementById('terminalTitle');
+            var terminalIndicator = document.getElementById('terminalIndicator');
+            var terminalProgressBar = document.getElementById('terminalProgressBar');
+            var terminalPercent = document.getElementById('terminalPercent');
+            var terminalBody = document.getElementById('terminalBody');
+
+            terminalPanel.style.display = 'block';
+            terminalIndicator.className = 'terminal-indicator';
+            terminalProgressBar.style.width = '25%';
+            terminalProgressBar.style.background = '';
+            terminalPercent.innerText = '25%';
+            terminalTitle.innerText = 'Preparing H2 file...';
+            terminalBody.innerHTML = '';
+
+            appendLog('Starting migration pipeline...');
+            appendLog('Step 1: Backing up any existing H2 file and creating a fresh one...');
+
+            try {
+                terminalProgressBar.style.width = '55%';
+                terminalPercent.innerText = '55%';
+                terminalTitle.innerText = 'Transferring database records...';
+                appendLog('Step 2: Executing schema migrations against the new H2 file...');
+                appendLog('Step 3: Transferring tables in topological order...');
+
+                var response = await fetch('/api/v1/database/migrate-to-h2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                var result = await response.json();
+
+                if (response.ok && result.success) {
+                    terminalProgressBar.style.width = '100%';
+                    terminalPercent.innerText = '100%';
+                    terminalIndicator.className = 'terminal-indicator done';
+                    terminalTitle.innerText = 'Migration complete';
+                    appendLog('Step 4: Syncing identity counters...');
+                    appendLog('Step 5: H2 activated as primary database backend.');
+
+                    if (result.details) {
+                        for (var key in result.details) {
+                            if (result.details.hasOwnProperty(key)) {
+                                appendLog('  &bull; ' + key + ': ' + result.details[key] + ' rows');
+                            }
+                        }
+                    }
+
+                    showAlert('<strong>Migration complete.</strong> Database transitioned to H2 successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                } else {
+                    terminalProgressBar.style.background = 'var(--rose)';
+                    terminalTitle.innerText = 'Migration failed';
+                    appendLog('ERROR: ' + (result.message || 'Unknown migration error'));
+                    showAlert('<strong>Migration failed.</strong> ' + (result.message || 'An error occurred during transfer.'), 'error');
+                }
+            } catch (err) {
+                terminalProgressBar.style.background = 'var(--rose)';
+                terminalTitle.innerText = 'Migration error';
+                appendLog('FATAL: ' + err.message);
+                showAlert('<strong>Error:</strong> ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function handleCopySnippet(elementId) {
+            var text = document.getElementById(elementId).innerText.trim();
+            var copyBtn = document.getElementById('copyBtn');
+            var copyBtnText = document.getElementById('copyBtnText');
+            navigator.clipboard.writeText(text).then(function() {
+                copyBtnText.innerText = 'Copied';
+                copyBtn.classList.add('copied');
+                setTimeout(function() {
+                    copyBtnText.innerText = 'Copy';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function createSecurePassword(length) {
+            var len = length || 24;
+            var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            var lower = 'abcdefghjkmnpqrstuvwxyz';
+            var digits = '23456789';
+            var symbols = '!@#%^*_-+=.~';
+            var all = upper + lower + digits + symbols;
+
+            var result = [
+                upper[Math.floor(Math.random() * upper.length)],
+                lower[Math.floor(Math.random() * lower.length)],
+                digits[Math.floor(Math.random() * digits.length)],
+                symbols[Math.floor(Math.random() * symbols.length)]
+            ];
+
+            var randomValues = new Uint32Array(len - result.length);
+            window.crypto.getRandomValues(randomValues);
+            for (var i = 0; i < randomValues.length; i++) {
+                result.push(all[randomValues[i] % all.length]);
+            }
+
+            for (var j = result.length - 1; j > 0; j--) {
+                var randBuf = new Uint32Array(1);
+                window.crypto.getRandomValues(randBuf);
+                var k = randBuf[0] % (j + 1);
+                var temp = result[j];
+                result[j] = result[k];
+                result[k] = temp;
+            }
+
+            return result.join('');
+        }
+
+        function generateFormPassword() {
+            var pwd = createSecurePassword(24);
+            var input = document.getElementById('password');
+            input.value = pwd;
+            input.type = 'text';
+            updateEyeIcon(true);
+        }
+
+        function generateDockerPassword() {
+            var pwd = createSecurePassword(24);
+            var cmdElement = document.getElementById('dockerCmd');
+            cmdElement.innerText = 'docker run -d --name suwayomi-postgres -p 5432:5432 -e POSTGRES_DB=suwayomi -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=' + pwd + ' -v postgres_data:/var/lib/postgresql/data postgres:16-alpine';
+
+            var badge = document.getElementById('dockerPasswordBadge');
+            if (badge) {
+                badge.style.display = 'inline-block';
+            }
+        }
+
+        function togglePasswordVisibility() {
+            var input = document.getElementById('password');
+            var isText = input.type === 'text';
+            input.type = isText ? 'password' : 'text';
+            updateEyeIcon(!isText);
+        }
+
+        function updateEyeIcon(visible) {
+            var eye = document.getElementById('eyeIcon');
+            if (!eye) return;
+            if (visible) {
+                eye.innerHTML = '<path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\"></path><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"></line>';
+            } else {
+                eye.innerHTML = '<path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle>';
+            }
+        }
+    </script>
+</body>
+</html>

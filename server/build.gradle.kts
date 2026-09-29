@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.postgres)
     implementation(libs.h2)
     implementation(libs.hikaricp)
+    implementation(libs.embeddedPostgres)
 
     // Exposed Migrations
     implementation(libs.exposed.migrations)

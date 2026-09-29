@@ -932,6 +932,16 @@ class ServerConfig(
         excludeFromBackup = true,
     )
 
+    // when databaseType is POSTGRESQL and this is true, the server manages its own bundled PostgreSQL instance
+    // instead of connecting to the host/port/credentials above - no separate Postgres/Docker setup required
+    val useEmbeddedPostgres: MutableStateFlow<Boolean> by BooleanSetting(
+        protoNumber = 99,
+        group = SettingGroup.DATABASE,
+        privacySafe = true,
+        defaultValue = false,
+        excludeFromBackup = true,
+    )
+
     val koreaderSyncStrategyForward: MutableStateFlow<KoreaderSyncConflictStrategy> by EnumSetting(
         protoNumber = 73,
         group = SettingGroup.KOREADER_SYNC,

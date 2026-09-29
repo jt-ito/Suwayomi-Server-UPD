@@ -44,10 +44,17 @@ object DBManager {
             HikariConfig().apply {
                 when (serverConfig.databaseType.value) {
                     DatabaseType.POSTGRESQL -> {
-                        jdbcUrl = "jdbc:${serverConfig.databaseUrl.value}"
+                        if (serverConfig.useEmbeddedPostgres.value) {
+                            val params = EmbeddedPostgresManager.ensureStarted()
+                            jdbcUrl = "jdbc:postgresql://${params.host}:${params.port}/${params.databaseName}"
+                            username = params.username
+                            password = params.password
+                        } else {
+                            jdbcUrl = "jdbc:${serverConfig.databaseUrl.value}"
+                            username = serverConfig.databaseUsername.value
+                            password = serverConfig.databasePassword.value
+                        }
                         driverClassName = "org.postgresql.Driver"
-                        username = serverConfig.databaseUsername.value
-                        password = serverConfig.databasePassword.value
                         // PostgreSQL specific optimizations
                         addDataSourceProperty("cachePrepStmts", "true")
                         addDataSourceProperty("useServerPrepStmts", "true")
@@ -110,13 +117,24 @@ object DBManager {
         } else {
             when (serverConfig.databaseType.value) {
                 DatabaseType.POSTGRESQL -> {
-                    Database.connect(
-                        "jdbc:${serverConfig.databaseUrl.value}",
-                        "org.postgresql.Driver",
-                        user = serverConfig.databaseUsername.value,
-                        password = serverConfig.databasePassword.value,
-                        databaseConfig = dbConfig,
-                    )
+                    if (serverConfig.useEmbeddedPostgres.value) {
+                        val params = EmbeddedPostgresManager.ensureStarted()
+                        Database.connect(
+                            "jdbc:postgresql://${params.host}:${params.port}/${params.databaseName}",
+                            "org.postgresql.Driver",
+                            user = params.username,
+                            password = params.password,
+                            databaseConfig = dbConfig,
+                        )
+                    } else {
+                        Database.connect(
+                            "jdbc:${serverConfig.databaseUrl.value}",
+                            "org.postgresql.Driver",
+                            user = serverConfig.databaseUsername.value,
+                            password = serverConfig.databasePassword.value,
+                            databaseConfig = dbConfig,
+                        )
+                    }
                 }
 
                 DatabaseType.H2 -> {
@@ -147,7 +165,18 @@ object DBManager {
 
 private val logger = KotlinLogging.logger {}
 
-fun databaseUp(givenDb: Database? = null) {
+// databaseUp() can be triggered from more than one place for the same underlying config change (the reactive
+// settings-change listener in ServerSetup.kt, and migration code calling it directly as a fallback) - without
+// this, two overlapping calls race to create the schema and run migrations against the same target database,
+// which showed up in practice as scattered "duplicate key" errors from two runMigrations() executions interleaving
+private val databaseUpLock = Any()
+
+fun databaseUp(givenDb: Database? = null) =
+    synchronized(databaseUpLock) {
+        databaseUpLocked(givenDb)
+    }
+
+private fun databaseUpLocked(givenDb: Database? = null) {
     val db =
         givenDb
             ?: try {

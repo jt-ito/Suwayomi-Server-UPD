@@ -10,10 +10,12 @@ package suwayomi.tachidesk.global
 import io.javalin.apibuilder.ApiBuilder.get
 import io.javalin.apibuilder.ApiBuilder.patch
 import io.javalin.apibuilder.ApiBuilder.path
+import io.javalin.apibuilder.ApiBuilder.post
 import io.javalin.apibuilder.ApiBuilder.ws
 import suwayomi.tachidesk.global.controller.GlobalMetaController
 import suwayomi.tachidesk.global.controller.SettingsController
 import suwayomi.tachidesk.global.controller.WebViewController
+import suwayomi.tachidesk.server.database.DatabaseMigrationController
 
 object GlobalAPI {
     fun defineEndpoints() {
@@ -28,6 +30,12 @@ object GlobalAPI {
         path("webview") {
             get("", WebViewController.webview)
             ws("", WebViewController::webviewWS)
+        }
+        path("database") {
+            get("status", DatabaseMigrationController.getStatus)
+            post("test", DatabaseMigrationController.testConnection)
+            post("migrate", DatabaseMigrationController.migrate)
+            post("migrate-to-h2", DatabaseMigrationController.migrateToH2)
         }
     }
 }

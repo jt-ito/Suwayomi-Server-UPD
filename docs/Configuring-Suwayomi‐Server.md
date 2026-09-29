@@ -276,12 +276,17 @@ server.databaseUrl = "postgresql://localhost:5432/suwayomi"
 server.databaseUsername = ""
 server.databasePassword = ""
 server.useHikariConnectionPool = true
+server.useEmbeddedPostgres = false
 ```
-- `server.databaseType` chooses which type of database to use. [H2](https://en.wikipedia.org/wiki/H2_Database_Engine) is the default; it is a simple file-based database for Java applications. Since it is only based on files without a server process, file corruption can be common when the server is not shut down properly. [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL) is a popular cross-platform, stable database. To use PostgreSQL, you need to run an instance yourself.
+- `server.databaseType` chooses which type of database to use. [H2](https://en.wikipedia.org/wiki/H2_Database_Engine) is the default; it is a simple file-based database for Java applications. Since it is only based on files without a server process, file corruption can be common when the server is not shut down properly. [PostgreSQL](https://en.wikipedia.org/wiki/PostgreSQL) is a popular cross-platform, stable database offering multi-reader concurrency and crash immunity.
 - `server.databaseUrl` the URL where to find the PostgreSQL server, including the database name.
 - `server.databaseUsername` the username with which to authenticate at the PostgreSQL instance.
-- `server.databasePassword` the username with which to authenticate at the PostgreSQL instance.
+- `server.databasePassword` the password with which to authenticate at the PostgreSQL instance.
 - `server.useHikariConnectionPool` use Hikari Connection Pool to connect to the database.
+- `server.useEmbeddedPostgres` when `databaseType` is `POSTGRESQL`, runs a bundled PostgreSQL instance instead of connecting to `databaseUrl` - no separate PostgreSQL/Docker install required.
+
+> [!TIP]
+> **One-Click Web Migration Tool**: You can test your PostgreSQL connection, view database statistics, and migrate all existing manga, chapters, categories, and reading history between H2 and PostgreSQL (in either direction) with zero data loss by visiting `http://localhost:4567/database` in your browser.
 
 ### SyncYomi
 ```
