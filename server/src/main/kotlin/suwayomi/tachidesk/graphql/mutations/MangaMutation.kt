@@ -5,19 +5,24 @@ package suwayomi.tachidesk.graphql.mutations
 import com.expediagroup.graphql.generator.annotations.GraphQLDeprecated
 import com.expediagroup.graphql.server.extensions.toGraphQLError
 import graphql.execution.DataFetcherResult
+import graphql.schema.DataFetchingEnvironment
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.LikePattern
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.getAttribute
+import suwayomi.tachidesk.server.user.idOrNull
 import suwayomi.tachidesk.graphql.types.ChapterType
 import suwayomi.tachidesk.graphql.types.MangaMetaType
 import suwayomi.tachidesk.graphql.types.MangaType
@@ -29,7 +34,9 @@ import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaMetaTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
 import suwayomi.tachidesk.manga.model.table.toDataClass
+import suwayomi.tachidesk.server.JavalinSetup.Attribute
 import suwayomi.tachidesk.server.JavalinSetup.future
+import suwayomi.tachidesk.server.user.idOrNull
 import uy.kohesive.injekt.injectLazy
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
@@ -69,15 +76,50 @@ class MangaMutation {
     )
 
     private suspend fun updateMangas(
+        userId: Int,
         ids: List<Int>,
         patch: UpdateMangaPatch,
     ) {
         transaction {
             if (patch.inLibrary != null) {
-                MangaTable.update({ MangaTable.id inList ids }) { update ->
-                    patch.inLibrary.also {
-                        update[inLibrary] = it
-                        if (it) update[inLibraryAt] = Instant.now().epochSecond
+                val now = Instant.now().epochSecond
+
+                // 1. Update user_manga table for calling user
+                ids.forEach { mangaId ->
+                    val existing =
+                        suwayomi.tachidesk.manga.model.table.UserMangaTable
+                            .selectAll()
+                            .where {
+                                (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
+                                    (suwayomi.tachidesk.manga.model.table.UserMangaTable.manga eq mangaId)
+                            }
+                            .firstOrNull()
+
+                    if (existing != null) {
+                        suwayomi.tachidesk.manga.model.table.UserMangaTable.update({
+                            (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
+                                (suwayomi.tachidesk.manga.model.table.UserMangaTable.manga eq mangaId)
+                        }) {
+                            it[inLibrary] = patch.inLibrary
+                            if (patch.inLibrary) it[inLibraryAt] = now
+                        }
+                    } else {
+                        suwayomi.tachidesk.manga.model.table.UserMangaTable.insert {
+                            it[user] = EntityID(userId, suwayomi.tachidesk.server.user.model.UserTable)
+                            it[manga] = EntityID(mangaId, MangaTable)
+                            it[inLibrary] = patch.inLibrary
+                            it[inLibraryAt] = if (patch.inLibrary) now else 0
+                        }
+                    }
+                }
+
+                // 2. Legacy fallback update for primary admin / background sync
+                if (userId == 1) {
+                    MangaTable.update({ MangaTable.id inList ids }) { update ->
+                        patch.inLibrary.also {
+                            update[inLibrary] = it
+                            if (it) update[inLibraryAt] = now
+                        }
                     }
                 }
             }
@@ -104,15 +146,20 @@ class MangaMutation {
     }
 
     @RequireAuth
-    fun updateManga(input: UpdateMangaInput): CompletableFuture<UpdateMangaPayload?> {
+    fun updateManga(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateMangaInput,
+    ): CompletableFuture<UpdateMangaPayload?> {
         val (clientMutationId, id, patch) = input
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
 
         return future {
-            updateMangas(listOf(id), patch)
+            updateMangas(userId, listOf(id), patch)
 
             val manga =
                 transaction {
-                    MangaType(MangaTable.selectAll().where { MangaTable.id eq id }.first())
+                    MangaType(MangaTable.selectAll().where { MangaTable.id eq id }.first(), userId)
                 }
 
             UpdateMangaPayload(
@@ -123,15 +170,20 @@ class MangaMutation {
     }
 
     @RequireAuth
-    fun updateMangas(input: UpdateMangasInput): CompletableFuture<UpdateMangasPayload?> {
+    fun updateMangas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateMangasInput,
+    ): CompletableFuture<UpdateMangasPayload?> {
         val (clientMutationId, ids, patch) = input
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
 
         return future {
-            updateMangas(ids, patch)
+            updateMangas(userId, ids, patch)
 
             val mangas =
                 transaction {
-                    MangaTable.selectAll().where { MangaTable.id inList ids }.map { MangaType(it) }
+                    MangaTable.selectAll().where { MangaTable.id inList ids }.map { MangaType(it, userId) }
                 }
 
             UpdateMangasPayload(

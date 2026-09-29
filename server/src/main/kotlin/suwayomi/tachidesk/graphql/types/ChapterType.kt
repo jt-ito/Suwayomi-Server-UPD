@@ -10,6 +10,9 @@ package suwayomi.tachidesk.graphql.types
 import com.expediagroup.graphql.server.extensions.getValueFromDataLoader
 import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.Edge
 import suwayomi.tachidesk.graphql.server.primitives.Node
@@ -54,9 +57,43 @@ class ChapterType(
             dataFetchingEnvironment.getDataLoader<Int, Int>("DownloadedChapterCountForMangaDataLoader")?.clear(mangaId)
             dataFetchingEnvironment.getDataLoader<Int, ChapterType>("LastReadChapterForMangaDataLoader")?.clear(mangaId)
         }
+
+        fun resolveUserChapter(chapterId: Int, userId: Int): ResultRow? {
+            return suwayomi.tachidesk.manga.model.table.UserChapterTable
+                .selectAll()
+                .where {
+                    (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                        (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter eq chapterId)
+                }
+                .firstOrNull()
+        }
+
+        fun resolveIsRead(row: ResultRow, userId: Int): Boolean {
+            val userRow = resolveUserChapter(row[ChapterTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isRead)
+                ?: if (userId == 1) row[ChapterTable.isRead] else false
+        }
+
+        fun resolveIsBookmarked(row: ResultRow, userId: Int): Boolean {
+            val userRow = resolveUserChapter(row[ChapterTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isBookmarked)
+                ?: if (userId == 1) row[ChapterTable.isBookmarked] else false
+        }
+
+        fun resolveLastPageRead(row: ResultRow, userId: Int): Int {
+            val userRow = resolveUserChapter(row[ChapterTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastPageRead)
+                ?: if (userId == 1) row[ChapterTable.lastPageRead] else 0
+        }
+
+        fun resolveLastReadAt(row: ResultRow, userId: Int): Long {
+            val userRow = resolveUserChapter(row[ChapterTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastReadAt)
+                ?: if (userId == 1) row[ChapterTable.lastReadAt] else 0L
+        }
     }
 
-    constructor(row: ResultRow) : this(
+    constructor(row: ResultRow, userId: Int? = null) : this(
         row[ChapterTable.id].value,
         row[ChapterTable.url],
         row[ChapterTable.name],
@@ -64,16 +101,15 @@ class ChapterType(
         row[ChapterTable.chapter_number],
         row[ChapterTable.scanlator],
         row[ChapterTable.manga].value,
-        row[ChapterTable.isRead],
-        row[ChapterTable.isBookmarked],
-        row[ChapterTable.lastPageRead],
-        row[ChapterTable.lastReadAt],
+        if (userId != null) resolveIsRead(row, userId) else row[ChapterTable.isRead],
+        if (userId != null) resolveIsBookmarked(row, userId) else row[ChapterTable.isBookmarked],
+        if (userId != null) resolveLastPageRead(row, userId) else row[ChapterTable.lastPageRead],
+        if (userId != null) resolveLastReadAt(row, userId) else row[ChapterTable.lastReadAt],
         row[ChapterTable.sourceOrder],
         row[ChapterTable.realUrl],
         row[ChapterTable.fetchedAt],
         row[ChapterTable.isDownloaded],
         row[ChapterTable.pageCount],
-//        transaction { ChapterTable.selectAll().where { Manga eq chapterEntry[manga].value }.count().toInt() },
     )
 
     constructor(dataClass: ChapterDataClass) : this(

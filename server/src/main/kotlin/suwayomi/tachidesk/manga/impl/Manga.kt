@@ -51,6 +51,9 @@ import suwayomi.tachidesk.manga.impl.util.updateMangaDownloadDir
 import suwayomi.tachidesk.manga.model.dataclass.ChapterDataClass
 import suwayomi.tachidesk.manga.model.dataclass.IncludeOrExclude
 import suwayomi.tachidesk.manga.model.dataclass.MangaDataClass
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.distinctChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.downloadedChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.unreadChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaMetaTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
@@ -257,23 +260,18 @@ object Manga {
         val mangaDaaClass = getManga(mangaId, onlineFetch)
 
         return transaction {
-            val unreadCount =
+            val allChapters =
                 ChapterTable
                     .selectAll()
-                    .where { (ChapterTable.manga eq mangaId) and (ChapterTable.isRead eq false) }
-                    .count()
+                    .where { ChapterTable.manga eq mangaId }
+                    .toList()
 
-            val downloadCount =
-                ChapterTable
-                    .selectAll()
-                    .where { (ChapterTable.manga eq mangaId) and (ChapterTable.isDownloaded eq true) }
-                    .count()
+            val chapterNumberOf: (ResultRow) -> Float = { it[ChapterTable.chapter_number] }
+            val chapterNameOf: (ResultRow) -> String = { it[ChapterTable.name] }
 
-            val chapterCount =
-                ChapterTable
-                    .selectAll()
-                    .where { (ChapterTable.manga eq mangaId) }
-                    .count()
+            val unreadCount = allChapters.unreadChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isRead] }.toLong()
+            val downloadCount = allChapters.downloadedChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isDownloaded] }.toLong()
+            val chapterCount = allChapters.distinctChapterCount(chapterNumberOf, chapterNameOf).toLong()
 
             val lastChapterRead =
                 ChapterTable

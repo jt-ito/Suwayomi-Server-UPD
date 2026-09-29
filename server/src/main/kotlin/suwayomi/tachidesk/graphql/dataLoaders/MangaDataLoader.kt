@@ -12,10 +12,13 @@ import graphql.GraphQLContext
 import org.dataloader.DataLoader
 import org.dataloader.DataLoaderFactory
 import org.jetbrains.exposed.v1.core.Slf4jSqlDebugLogger
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.types.MangaNodeList
@@ -24,6 +27,7 @@ import suwayomi.tachidesk.graphql.types.MangaType
 import suwayomi.tachidesk.manga.model.table.CategoryMangaTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
 import suwayomi.tachidesk.server.JavalinSetup.future
+import suwayomi.tachidesk.server.user.idOrNull
 
 class MangaDataLoader : KotlinDataLoader<Int, MangaType> {
     override val dataLoaderName = "MangaDataLoader"
@@ -33,11 +37,13 @@ class MangaDataLoader : KotlinDataLoader<Int, MangaType> {
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
+                    val userType = graphQLContext.get<suwayomi.tachidesk.server.user.UserType>(suwayomi.tachidesk.server.JavalinSetup.Attribute.TachideskUser)
+                    val userId = userType?.idOrNull ?: 1
                     val manga =
                         MangaTable
                             .selectAll()
                             .where { MangaTable.id inList ids }
-                            .map { MangaType(it) }
+                            .map { MangaType(it, userId) }
                             .associateBy { it.id }
                     ids.map { manga[it] }
                 }
@@ -53,14 +59,35 @@ class MangaForCategoryDataLoader : KotlinDataLoader<Int, MangaNodeList> {
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
+                    val userType = graphQLContext.get<suwayomi.tachidesk.server.user.UserType>(suwayomi.tachidesk.server.JavalinSetup.Attribute.TachideskUser)
+                    val userId = userType?.idOrNull ?: 1
+
                     val itemsByRef =
                         if (ids.contains(0)) {
-                            MangaTable
-                                .leftJoin(CategoryMangaTable)
-                                .selectAll()
-                                .where { MangaTable.inLibrary eq true }
+                            val baseQuery =
+                                MangaTable
+                                    .leftJoin(CategoryMangaTable)
+                                    .selectAll()
+
+                            val scopedQuery =
+                                if (userId == 1) {
+                                    baseQuery.where { MangaTable.inLibrary eq true }
+                                } else {
+                                    baseQuery.where {
+                                        MangaTable.id inSubQuery (
+                                            suwayomi.tachidesk.manga.model.table.UserMangaTable
+                                                .select(suwayomi.tachidesk.manga.model.table.UserMangaTable.manga)
+                                                .where {
+                                                    (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
+                                                        (suwayomi.tachidesk.manga.model.table.UserMangaTable.inLibrary eq true)
+                                                }
+                                        )
+                                    }
+                                }
+
+                            scopedQuery
                                 .andWhere { CategoryMangaTable.manga.isNull() }
-                                .map { MangaType(it) }
+                                .map { MangaType(it, userId) }
                                 .let {
                                     mapOf(0 to it)
                                 }
@@ -71,7 +98,7 @@ class MangaForCategoryDataLoader : KotlinDataLoader<Int, MangaNodeList> {
                                 .innerJoin(MangaTable)
                                 .selectAll()
                                 .where { CategoryMangaTable.category inList ids }
-                                .map { Pair(it[CategoryMangaTable.category].value, MangaType(it)) }
+                                .map { Pair(it[CategoryMangaTable.category].value, MangaType(it, userId)) }
                                 .groupBy { it.first }
                                 .mapValues { it.value.map { pair -> pair.second } }
 

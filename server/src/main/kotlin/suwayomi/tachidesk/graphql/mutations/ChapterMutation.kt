@@ -3,6 +3,7 @@
 package suwayomi.tachidesk.graphql.mutations
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDeprecated
+import graphql.schema.DataFetchingEnvironment
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.jetbrains.exposed.v1.core.LikePattern
@@ -15,14 +16,18 @@ import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.statements.BatchUpdateStatement
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.statements.toExecutable
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.getAttribute
 import suwayomi.tachidesk.graphql.types.ChapterMetaType
 import suwayomi.tachidesk.graphql.types.ChapterType
+import suwayomi.tachidesk.server.JavalinSetup.Attribute
+import suwayomi.tachidesk.server.user.idOrNull
 import suwayomi.tachidesk.graphql.types.MetaInput
 import suwayomi.tachidesk.graphql.types.SyncConflictInfoType
 import suwayomi.tachidesk.manga.impl.Chapter
@@ -71,6 +76,7 @@ class ChapterMutation {
     )
 
     private fun updateChapters(
+        userId: Int,
         ids: List<Int>,
         patch: UpdateChapterPatch,
     ) {
@@ -94,23 +100,66 @@ class ChapterMutation {
             if (patch.isRead != null || patch.isBookmarked != null || patch.lastPageRead != null) {
                 val now = Instant.now().epochSecond
 
-                BatchUpdateStatement(ChapterTable)
-                    .apply {
-                        ids.forEach { chapterId ->
-                            addBatch(EntityID(chapterId, ChapterTable))
-                            patch.isRead?.also {
-                                this[ChapterTable.isRead] = it
+                // 1. Update user_chapter table for calling user
+                ids.forEach { chapterId ->
+                    val existing =
+                        suwayomi.tachidesk.manga.model.table.UserChapterTable
+                            .selectAll()
+                            .where {
+                                (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                                    (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter eq chapterId)
                             }
-                            patch.isBookmarked?.also {
-                                this[ChapterTable.isBookmarked] = it
-                            }
-                            patch.lastPageRead?.also {
-                                this[ChapterTable.lastPageRead] = it.coerceAtMost(chapterIdToPageCount[chapterId] ?: 0).coerceAtLeast(0)
-                                this[ChapterTable.lastReadAt] = now
+                            .firstOrNull()
+
+                    val targetPage =
+                        patch.lastPageRead?.let {
+                            it.coerceAtMost(chapterIdToPageCount[chapterId] ?: 0).coerceAtLeast(0)
+                        }
+
+                    if (existing != null) {
+                        suwayomi.tachidesk.manga.model.table.UserChapterTable.update({
+                            (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                                (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter eq chapterId)
+                        }) {
+                            patch.isRead?.let { r -> it[isRead] = r }
+                            patch.isBookmarked?.let { b -> it[isBookmarked] = b }
+                            targetPage?.let { p ->
+                                it[lastPageRead] = p
+                                it[lastReadAt] = now
                             }
                         }
-                    }.toExecutable()
-                    .execute(this@transaction)
+                    } else {
+                        suwayomi.tachidesk.manga.model.table.UserChapterTable.insert {
+                            it[user] = EntityID(userId, suwayomi.tachidesk.server.user.model.UserTable)
+                            it[chapter] = EntityID(chapterId, ChapterTable)
+                            it[isRead] = patch.isRead ?: false
+                            it[isBookmarked] = patch.isBookmarked ?: false
+                            it[lastPageRead] = targetPage ?: 0
+                            it[lastReadAt] = if (targetPage != null) now else 0
+                        }
+                    }
+                }
+
+                // 2. Legacy fallback update for primary admin / background sync
+                if (userId == 1) {
+                    BatchUpdateStatement(ChapterTable)
+                        .apply {
+                            ids.forEach { chapterId ->
+                                addBatch(EntityID(chapterId, ChapterTable))
+                                patch.isRead?.also {
+                                    this[ChapterTable.isRead] = it
+                                }
+                                patch.isBookmarked?.also {
+                                    this[ChapterTable.isBookmarked] = it
+                                }
+                                patch.lastPageRead?.also {
+                                    this[ChapterTable.lastPageRead] = it.coerceAtMost(chapterIdToPageCount[chapterId] ?: 0).coerceAtLeast(0)
+                                    this[ChapterTable.lastReadAt] = now
+                                }
+                            }
+                        }.toExecutable()
+                        .execute(this@transaction)
+                }
             }
         }
 
@@ -125,14 +174,19 @@ class ChapterMutation {
     }
 
     @RequireAuth
-    fun updateChapter(input: UpdateChapterInput): UpdateChapterPayload? {
+    fun updateChapter(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateChapterInput,
+    ): UpdateChapterPayload? {
         val (clientMutationId, id, patch) = input
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
 
-        updateChapters(listOf(id), patch)
+        updateChapters(userId, listOf(id), patch)
 
         val chapter =
             transaction {
-                ChapterType(ChapterTable.selectAll().where { ChapterTable.id eq id }.first())
+                ChapterType(ChapterTable.selectAll().where { ChapterTable.id eq id }.first(), userId)
             }
 
         return UpdateChapterPayload(
@@ -142,14 +196,19 @@ class ChapterMutation {
     }
 
     @RequireAuth
-    fun updateChapters(input: UpdateChaptersInput): UpdateChaptersPayload? {
+    fun updateChapters(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateChaptersInput,
+    ): UpdateChaptersPayload? {
         val (clientMutationId, ids, patch) = input
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
 
-        updateChapters(ids, patch)
+        updateChapters(userId, ids, patch)
 
         val chapters =
             transaction {
-                ChapterTable.selectAll().where { ChapterTable.id inList ids }.map { ChapterType(it) }
+                ChapterTable.selectAll().where { ChapterTable.id inList ids }.map { ChapterType(it, userId) }
             }
 
         return UpdateChaptersPayload(

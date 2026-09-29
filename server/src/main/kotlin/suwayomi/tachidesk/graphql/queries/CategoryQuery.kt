@@ -13,11 +13,18 @@ import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.getAttribute
+import suwayomi.tachidesk.server.JavalinSetup.Attribute
+import suwayomi.tachidesk.server.user.idOrNull
 import suwayomi.tachidesk.graphql.queries.filter.BooleanFilter
 import suwayomi.tachidesk.graphql.queries.filter.Filter
 import suwayomi.tachidesk.graphql.queries.filter.HasGetOp
@@ -124,6 +131,7 @@ class CategoryQuery {
 
     @RequireAuth
     fun categories(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: CategoryCondition? = null,
         filter: CategoryFilter? = null,
         @GraphQLDeprecated(
@@ -143,9 +151,13 @@ class CategoryQuery {
         last: Int? = null,
         offset: Int? = null,
     ): CategoryNodeList {
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
+
         val queryResults =
             transaction {
                 val res = CategoryTable.selectAll()
+                res.andWhere { (CategoryTable.user eq userId) or (CategoryTable.user.isNull()) }
 
                 res.applyOps(condition, filter)
 

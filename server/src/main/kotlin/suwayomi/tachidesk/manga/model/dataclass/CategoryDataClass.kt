@@ -33,6 +33,7 @@ data class CategoryDataClass(
     val version: Long,
     val uid: Long,
     val lastModifiedAt: Long,
+    val userId: Int? = null,
 ) {
     @Deprecated("Remove with V1 Api")
     val size: Int by lazy {

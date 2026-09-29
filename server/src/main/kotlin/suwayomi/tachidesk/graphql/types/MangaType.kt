@@ -11,6 +11,10 @@ import com.expediagroup.graphql.server.extensions.getValueFromDataLoader
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.dataLoaders.MangaChapterStats
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.Edge
@@ -73,9 +77,33 @@ class MangaType(
             dataFetchingEnvironment.getDataLoader<Int, List<MangaMetaType>>("MangaMetaDataLoader")?.clear(mangaId)
             dataFetchingEnvironment.getDataLoader<Int, CategoryNodeList>("CategoriesForMangaDataLoader")?.clear(mangaId)
         }
+
+        fun resolveUserManga(mangaId: Int, userId: Int): ResultRow? {
+            return transaction {
+                suwayomi.tachidesk.manga.model.table.UserMangaTable
+                    .selectAll()
+                    .where {
+                        (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
+                            (suwayomi.tachidesk.manga.model.table.UserMangaTable.manga eq mangaId)
+                    }
+                    .firstOrNull()
+            }
+        }
+
+        fun resolveInLibrary(row: ResultRow, userId: Int): Boolean {
+            val userRow = resolveUserManga(row[MangaTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserMangaTable.inLibrary)
+                ?: if (userId == 1) row[MangaTable.inLibrary] else false
+        }
+
+        fun resolveInLibraryAt(row: ResultRow, userId: Int): Long {
+            val userRow = resolveUserManga(row[MangaTable.id].value, userId)
+            return userRow?.get(suwayomi.tachidesk.manga.model.table.UserMangaTable.inLibraryAt)
+                ?: if (userId == 1) row[MangaTable.inLibraryAt] else 0L
+        }
     }
 
-    constructor(row: ResultRow) : this(
+    constructor(row: ResultRow, userId: Int? = null) : this(
         row[MangaTable.id].value,
         row[MangaTable.sourceReference],
         row[MangaTable.url],
@@ -88,8 +116,8 @@ class MangaType(
         row[MangaTable.description],
         row[MangaTable.genre].toGenreList(),
         MangaStatus.valueOf(row[MangaTable.status]),
-        row[MangaTable.inLibrary],
-        row[MangaTable.inLibraryAt],
+        if (userId != null) resolveInLibrary(row, userId) else row[MangaTable.inLibrary],
+        if (userId != null) resolveInLibraryAt(row, userId) else row[MangaTable.inLibraryAt],
         UpdateStrategy.valueOf(row[MangaTable.updateStrategy]),
         row[MangaTable.realUrl],
         row[MangaTable.lastFetchedAt],

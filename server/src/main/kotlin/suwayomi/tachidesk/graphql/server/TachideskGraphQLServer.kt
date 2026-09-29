@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import suwayomi.tachidesk.graphql.server.subscriptions.ApolloSubscriptionProtocolHandler
 import suwayomi.tachidesk.server.JavalinSetup.future
+import suwayomi.tachidesk.server.user.UnauthorizedException
 import tools.jackson.module.kotlin.jacksonObjectMapper
 
 class TachideskGraphQLServer(
@@ -59,7 +60,13 @@ class TachideskGraphQLServer(
                     val sourceLocation = handlerParameters.sourceLocation
                     val path = handlerParameters.path
 
-                    logger.error(exception) { "GraphQL execution failed due to" }
+                    if (exception is UnauthorizedException) {
+                        // Expected e.g. whenever a client uses an expired access token. The client detects this error (by
+                        // its message, which is why it still gets sent below), refreshes the token and retries.
+                        logger.debug { "GraphQL request unauthorized: path=$path" }
+                    } else {
+                        logger.error(exception) { "GraphQL execution failed due to" }
+                    }
 
                     val error =
                         ExceptionWhileDataFetching(

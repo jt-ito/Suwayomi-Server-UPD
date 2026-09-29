@@ -53,6 +53,7 @@ import suwayomi.tachidesk.graphql.queries.SourceQuery
 import suwayomi.tachidesk.graphql.queries.SyncQuery
 import suwayomi.tachidesk.graphql.queries.TrackQuery
 import suwayomi.tachidesk.graphql.queries.UpdateQuery
+import suwayomi.tachidesk.graphql.queries.UserQuery
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.GraphQLCursor
 import suwayomi.tachidesk.graphql.server.primitives.GraphQLDurationAsString
@@ -116,6 +117,7 @@ object GraphQLSchemaProvider {
                         TopLevelObject(SyncQuery()),
                         TopLevelObject(TrackQuery()),
                         TopLevelObject(UpdateQuery()),
+                        TopLevelObject(UserQuery()),
                     ),
                 mutations =
                     listOf(

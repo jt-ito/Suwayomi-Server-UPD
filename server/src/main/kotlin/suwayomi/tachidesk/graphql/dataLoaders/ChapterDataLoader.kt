@@ -12,6 +12,7 @@ import graphql.GraphQLContext
 import org.dataloader.DataLoader
 import org.dataloader.DataLoaderFactory
 import org.jetbrains.exposed.v1.core.Case
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Slf4jSqlDebugLogger
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -28,8 +29,13 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.types.ChapterNodeList
 import suwayomi.tachidesk.graphql.types.ChapterNodeList.Companion.toNodeList
 import suwayomi.tachidesk.graphql.types.ChapterType
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.bookmarkedChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.distinctChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.downloadedChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.unreadChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.server.JavalinSetup.future
+import suwayomi.tachidesk.server.user.idOrNull
 
 class ChapterDataLoader : KotlinDataLoader<Int, ChapterType> {
     override val dataLoaderName = "ChapterDataLoader"
@@ -39,11 +45,44 @@ class ChapterDataLoader : KotlinDataLoader<Int, ChapterType> {
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
+                    val userType = graphQLContext.get<suwayomi.tachidesk.server.user.UserType>(suwayomi.tachidesk.server.JavalinSetup.Attribute.TachideskUser)
+                    val userId = userType?.idOrNull ?: 1
+
+                    val userProgressMap =
+                        suwayomi.tachidesk.manga.model.table.UserChapterTable
+                            .selectAll()
+                            .where {
+                                (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                                    (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter inList ids)
+                            }
+                            .associateBy { it[suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter].value }
+
                     val chapters =
                         ChapterTable
                             .selectAll()
                             .where { ChapterTable.id inList ids }
-                            .map { ChapterType(it) }
+                            .map { row ->
+                                val chId = row[ChapterTable.id].value
+                                val userRow = userProgressMap[chId]
+                                ChapterType(
+                                    id = chId,
+                                    url = row[ChapterTable.url],
+                                    name = row[ChapterTable.name],
+                                    uploadDate = row[ChapterTable.date_upload],
+                                    chapterNumber = row[ChapterTable.chapter_number],
+                                    scanlator = row[ChapterTable.scanlator],
+                                    mangaId = row[ChapterTable.manga].value,
+                                    isRead = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isRead) ?: (if (userId == 1) row[ChapterTable.isRead] else false),
+                                    isBookmarked = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isBookmarked) ?: (if (userId == 1) row[ChapterTable.isBookmarked] else false),
+                                    lastPageRead = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastPageRead) ?: (if (userId == 1) row[ChapterTable.lastPageRead] else 0),
+                                    lastReadAt = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastReadAt) ?: (if (userId == 1) row[ChapterTable.lastReadAt] else 0L),
+                                    sourceOrder = row[ChapterTable.sourceOrder],
+                                    realUrl = row[ChapterTable.realUrl],
+                                    fetchedAt = row[ChapterTable.fetchedAt],
+                                    isDownloaded = row[ChapterTable.isDownloaded],
+                                    pageCount = row[ChapterTable.pageCount],
+                                )
+                            }
                             .associateBy { it.id }
                     ids.map { chapters[it] }
                 }
@@ -59,13 +98,61 @@ class ChaptersForMangaDataLoader : KotlinDataLoader<Int, ChapterNodeList> {
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
-                    val chaptersByMangaId =
+                    val userType = graphQLContext.get<suwayomi.tachidesk.server.user.UserType>(suwayomi.tachidesk.server.JavalinSetup.Attribute.TachideskUser)
+                    val userId = userType?.idOrNull ?: 1
+
+                    val chapterRows =
                         ChapterTable
                             .selectAll()
                             .where { ChapterTable.manga inList ids }
-                            .map { ChapterType(it) }
+                            .toList()
+
+                    val chapterIds = chapterRows.map { it[ChapterTable.id].value }
+
+                    val userProgressMap =
+                        if (chapterIds.isNotEmpty()) {
+                            suwayomi.tachidesk.manga.model.table.UserChapterTable
+                                .selectAll()
+                                .where {
+                                    (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                                        (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter inList chapterIds)
+                                }
+                                .associateBy { it[suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter].value }
+                        } else {
+                            emptyMap()
+                        }
+
+                    val chaptersByMangaId =
+                        chapterRows
+                            .map { row ->
+                                val chId = row[ChapterTable.id].value
+                                val userRow = userProgressMap[chId]
+                                ChapterType(
+                                    id = chId,
+                                    url = row[ChapterTable.url],
+                                    name = row[ChapterTable.name],
+                                    uploadDate = row[ChapterTable.date_upload],
+                                    chapterNumber = row[ChapterTable.chapter_number],
+                                    scanlator = row[ChapterTable.scanlator],
+                                    mangaId = row[ChapterTable.manga].value,
+                                    isRead = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isRead) ?: (if (userId == 1) row[ChapterTable.isRead] else false),
+                                    isBookmarked = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isBookmarked) ?: (if (userId == 1) row[ChapterTable.isBookmarked] else false),
+                                    lastPageRead = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastPageRead) ?: (if (userId == 1) row[ChapterTable.lastPageRead] else 0),
+                                    lastReadAt = userRow?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.lastReadAt) ?: (if (userId == 1) row[ChapterTable.lastReadAt] else 0L),
+                                    sourceOrder = row[ChapterTable.sourceOrder],
+                                    realUrl = row[ChapterTable.realUrl],
+                                    fetchedAt = row[ChapterTable.fetchedAt],
+                                    isDownloaded = row[ChapterTable.isDownloaded],
+                                    pageCount = row[ChapterTable.pageCount],
+                                )
+                            }
                             .groupBy { it.mangaId }
-                    ids.map { (chaptersByMangaId[it] ?: emptyList()).toNodeList() }
+                    ids.map { mangaId ->
+                        val chapters = chaptersByMangaId[mangaId] ?: emptyList()
+                        chapters.toNodeList().copy(
+                            totalCount = chapters.distinctChapterCount({ it.chapterNumber }, { it.name }),
+                        )
+                    }
                 }
             }
         }
@@ -85,52 +172,75 @@ class ChapterFlagCountForMangaDataLoader : KotlinDataLoader<Int, MangaChapterSta
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
+                    val userType = graphQLContext.get<suwayomi.tachidesk.server.user.UserType>(suwayomi.tachidesk.server.JavalinSetup.Attribute.TachideskUser)
+                    val userId = userType?.idOrNull ?: 1
 
-                    val unreadCount =
-                        Case()
-                            .When(ChapterTable.isRead eq false, intLiteral(1))
-                            .Else(intLiteral(0))
-                            .sum()
-
-                    val downloadCount =
-                        Case()
-                            .When(ChapterTable.isDownloaded eq true, intLiteral(1))
-                            .Else(intLiteral(0))
-                            .sum()
-
-                    val bookmarkCount =
-                        Case()
-                            .When(ChapterTable.isBookmarked eq true, intLiteral(1))
-                            .Else(intLiteral(0))
-                            .sum()
-
-                    val statsByMangaId =
+                    val allChapters =
                         ChapterTable
                             .select(
+                                ChapterTable.id,
                                 ChapterTable.manga,
-                                unreadCount,
-                                downloadCount,
-                                bookmarkCount,
+                                ChapterTable.chapter_number,
+                                ChapterTable.name,
+                                ChapterTable.isRead,
+                                ChapterTable.isDownloaded,
+                                ChapterTable.isBookmarked,
                             ).where {
                                 ChapterTable.manga inList ids
-                            }.groupBy(ChapterTable.manga)
-                            .associate {
-                                val mangaId = it[ChapterTable.manga].value
+                            }.toList()
 
-                                mangaId to
-                                    MangaChapterStats(
-                                        unreadCount = it[unreadCount] ?: 0,
-                                        downloadCount = it[downloadCount] ?: 0,
-                                        bookmarkCount = it[bookmarkCount] ?: 0,
-                                    )
+                    val chaptersByManga = allChapters.groupBy { it[ChapterTable.manga].value }
+
+                    val chapterNumberOf: (ResultRow) -> Float = { it[ChapterTable.chapter_number] }
+                    val chapterNameOf: (ResultRow) -> String = { it[ChapterTable.name] }
+
+                    if (userId == 1) {
+                        ids.map { mangaId ->
+                            val chapters = chaptersByManga[mangaId] ?: emptyList()
+                            if (chapters.isEmpty()) {
+                                MangaChapterStats(0, 0, 0)
+                            } else {
+                                MangaChapterStats(
+                                    unreadCount = chapters.unreadChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isRead] },
+                                    downloadCount = chapters.downloadedChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isDownloaded] },
+                                    bookmarkCount = chapters.bookmarkedChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isBookmarked] },
+                                )
+                            }
+                        }
+                    } else {
+                        val allChapterIds = allChapters.map { it[ChapterTable.id].value }
+
+                        val userRows =
+                            if (allChapterIds.isNotEmpty()) {
+                                suwayomi.tachidesk.manga.model.table.UserChapterTable
+                                    .selectAll()
+                                    .where {
+                                        (suwayomi.tachidesk.manga.model.table.UserChapterTable.user eq userId) and
+                                            (suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter inList allChapterIds)
+                                    }.associateBy { it[suwayomi.tachidesk.manga.model.table.UserChapterTable.chapter].value }
+                            } else {
+                                emptyMap()
                             }
 
-                    ids.map {
-                        statsByMangaId[it] ?: MangaChapterStats(
-                            unreadCount = 0,
-                            downloadCount = 0,
-                            bookmarkCount = 0,
-                        )
+                        val isReadOf: (ResultRow) -> Boolean = { ch ->
+                            userRows[ch[ChapterTable.id].value]?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isRead) == true
+                        }
+                        val isBookmarkedOf: (ResultRow) -> Boolean = { ch ->
+                            userRows[ch[ChapterTable.id].value]?.get(suwayomi.tachidesk.manga.model.table.UserChapterTable.isBookmarked) == true
+                        }
+
+                        ids.map { mangaId ->
+                            val chapters = chaptersByManga[mangaId] ?: emptyList()
+                            if (chapters.isEmpty()) {
+                                MangaChapterStats(0, 0, 0)
+                            } else {
+                                MangaChapterStats(
+                                    unreadCount = chapters.unreadChapterCount(chapterNumberOf, chapterNameOf, isReadOf),
+                                    downloadCount = chapters.downloadedChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isDownloaded] },
+                                    bookmarkCount = chapters.bookmarkedChapterCount(chapterNumberOf, chapterNameOf, isBookmarkedOf),
+                                )
+                            }
+                        }
                     }
                 }
             }

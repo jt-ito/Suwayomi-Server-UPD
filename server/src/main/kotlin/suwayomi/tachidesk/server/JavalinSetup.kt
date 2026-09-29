@@ -38,6 +38,8 @@ import suwayomi.tachidesk.graphql.types.AuthMode
 import suwayomi.tachidesk.i18n.LocalizationHelper
 import suwayomi.tachidesk.manga.MangaAPI
 import suwayomi.tachidesk.opds.OpdsAPI
+import suwayomi.tachidesk.server.database.DatabaseMigrationService
+import suwayomi.tachidesk.server.generated.BuildConfig
 import suwayomi.tachidesk.server.user.ForbiddenException
 import suwayomi.tachidesk.server.user.UnauthorizedException
 import suwayomi.tachidesk.server.user.UserType
@@ -156,6 +158,7 @@ object JavalinSetup {
                                 .distinct()
                                 .forEach { address ->
                                     appendLine("  http://$address:$port")
+                                    appendLine("  Database migration: http://$address:$port/database")
                                 }
                         }.trimEnd()
                     }
@@ -198,9 +201,11 @@ object JavalinSetup {
         post(loginPath) { ctx ->
             val username = ctx.formParam("user")
             val password = ctx.formParam("pass")
-            val isValid =
+            val user = username?.let { u -> password?.let { p -> suwayomi.tachidesk.server.user.UserManager.authenticate(u, p) } }
+            val isConfigValid =
                 username == serverConfig.authUsername.value &&
                     password == serverConfig.authPassword.value
+            val isValid = user != null || isConfigValid
 
             if (isValid) {
                 val redirect = ctx.queryParam("redirect") ?: ServerSubpath.maybeAddAsPrefix("/")
@@ -208,9 +213,21 @@ object JavalinSetup {
                 if (uri.host != null || uri.scheme != null) {
                     throw IllegalArgumentException("Given redirect is not relative, refusing")
                 }
-                // NOTE: We currently have no session handler attached.
-                // Thus, all sessions are stored in memory and not persisted.
-                // Furthermore, default session timeout appears to be 30m
+                val token = user?.let { suwayomi.tachidesk.global.impl.util.Jwt.generateJwt(it.id, it.username, it.role).accessToken }
+                    ?: suwayomi.tachidesk.server.user.UserManager.getUser(1)?.let { suwayomi.tachidesk.global.impl.util.Jwt.generateJwt(it.id, it.username, it.role).accessToken }
+                if (token != null) {
+                    ctx.cookie(
+                        io.javalin.http.Cookie(
+                            name = "suwayomi-server-token",
+                            value = token,
+                            maxAge = 30 * 86400,
+                            path = "/",
+                            sameSite = io.javalin.http.SameSite.LAX,
+                            secure = false,
+                            isHttpOnly = false,
+                        ),
+                    )
+                }
                 ctx.header("Location", redirect)
                 ctx.sessionAttribute("logged-in", username)
                 throw RedirectResponse(HttpStatus.SEE_OTHER)
@@ -227,6 +244,28 @@ object JavalinSetup {
                 ),
             )
         }
+
+        val databasePath = ServerSubpath.maybeAddAsPrefix("/database")
+        val databaseHtmlPath = ServerSubpath.maybeAddAsPrefix("/database.html")
+
+        val renderDatabaseSetup: (Context) -> Unit = { ctx ->
+            ctx.header("content-type", "text/html")
+            val stats = DatabaseMigrationService.getDatabaseStats()
+            ctx.render(
+                "DatabaseSetup.jte",
+                mapOf(
+                    "stats" to stats,
+                    "defaultHost" to "localhost",
+                    "defaultPort" to 5432,
+                    "defaultDatabase" to "suwayomi",
+                    "defaultUsername" to "postgres",
+                    "version" to BuildConfig.VERSION,
+                ),
+            )
+        }
+
+        get(databasePath, renderDatabaseSetup)
+        get(databaseHtmlPath, renderDatabaseSetup)
 
         beforeMatched { ctx ->
             val isWebManifest =
@@ -247,12 +286,12 @@ object JavalinSetup {
 
             val authMode = serverConfig.authMode.value
 
-            fun credentialsValid(): Boolean {
-                val basicAuthCredentials = ctx.basicAuthCredentials() ?: return false
-                val (username, password) = basicAuthCredentials
-                return username == serverConfig.authUsername.value &&
-                    password == serverConfig.authPassword.value
-            }
+            val basicUser =
+                ctx.basicAuthCredentials()?.let { (user, pass) ->
+                    suwayomi.tachidesk.server.user.UserManager.authenticate(user, pass)
+                }
+
+            fun credentialsValid(): Boolean = basicUser != null
 
             fun cookieValid(): Boolean {
                 val username = ctx.sessionAttribute<String>("logged-in") ?: return false
@@ -272,7 +311,18 @@ object JavalinSetup {
                 throw UnauthorizedResponse()
             }
 
-            ctx.setAttribute(Attribute.TachideskUser, getUserFromContext(ctx))
+            val userType =
+                if (basicUser != null) {
+                    if (basicUser.role.equals("ADMIN", ignoreCase = true)) {
+                        suwayomi.tachidesk.server.user.UserType.Admin(basicUser.id)
+                    } else {
+                        suwayomi.tachidesk.server.user.UserType.Member(basicUser.id)
+                    }
+                } else {
+                    getUserFromContext(ctx)
+                }
+
+            ctx.setAttribute(Attribute.TachideskUser, userType)
             ctx.setAttribute(Attribute.TachideskBasic, credentialsValid())
         }
 

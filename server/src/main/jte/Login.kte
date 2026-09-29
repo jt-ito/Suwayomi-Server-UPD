@@ -155,9 +155,9 @@
             <h2>Login</h2>
             <div class="controls">
                 <label for="user">${MR.strings.login_label_username.localized(locale)}:</label>
-                    <input type="text" name="user" id="user" required placeholder="${MR.strings.login_placeholder_username.localized(locale)}"/>
+                    <input type="text" name="user" id="user" required pattern="^[a-zA-Z0-9._-]{3,32}$" minlength="3" maxlength="32" title="3-32 characters: letters, numbers, underscores, dots, or hyphens" autocomplete="username" placeholder="${MR.strings.login_placeholder_username.localized(locale)}"/>
                     <label for="pass">${MR.strings.login_label_password.localized(locale)}:</label>
-                    <input type="password" name="pass" id="pass" required placeholder="${MR.strings.login_placeholder_password.localized(locale)}"/>
+                    <input type="password" name="pass" id="pass" required minlength="4" maxlength="128" autocomplete="current-password" placeholder="${MR.strings.login_placeholder_password.localized(locale)}"/>
             </div>
             <div class="submit">
                 <button type="submit">${MR.strings.login_label_login.localized(locale)}</button>
@@ -167,5 +167,77 @@
     <footer>
         <p>Suwayomi: ${MR.strings.label_version.localized(locale, BuildConfig.VERSION)}</p>
     </footer>
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var errEl = document.querySelector('.error');
+            if (errEl) errEl.style.display = 'none';
+            var u = document.getElementById('user').value.trim();
+            var p = document.getElementById('pass').value;
+
+            var userRegex = /^[a-zA-Z0-9._-]{3,32}$/;
+            if (!u || u.length < 3 || u.length > 32 || !userRegex.test(u) || /[<>"'/\\`]/.test(u)) {
+                if (errEl) {
+                    errEl.textContent = 'Username must be between 3 and 32 characters (letters, numbers, underscores, dots, or hyphens only).';
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+            if (!p || p.length < 4 || p.length > 128) {
+                if (errEl) {
+                    errEl.textContent = 'Password must be between 4 and 128 characters.';
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+
+            var btn = document.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Authenticating...';
+            }
+            fetch('./api/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: 'mutation($input: LoginInput!) { login(input: $input) { accessToken refreshToken } }',
+                    variables: { input: { username: u, password: p } }
+                })
+            }).then(function(res) {
+                return res.json();
+            }).then(function(data) {
+                if (data.errors && data.errors.length) {
+                    throw new Error(data.errors[0].message || 'Invalid username or password');
+                }
+                if (data.data && data.data.login && data.data.login.accessToken) {
+                    var token = data.data.login.accessToken;
+                    localStorage.setItem('suwayomi-server-token', token);
+                    localStorage.removeItem('suwayomi-signed-out');
+                    document.cookie = 'suwayomi-server-token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
+                    var params = new URLSearchParams(window.location.search);
+                    var redirect = params.get('redirect') || './';
+                    window.location.href = redirect;
+                } else {
+                    throw new Error('Invalid username or password');
+                }
+            }).catch(function(err) {
+                if (errEl) {
+                    var raw = (err && err.message) || '';
+                    var low = raw.toLowerCase();
+                    if (low.indexOf('incorrect') !== -1 || low.indexOf('password') !== -1 || low.indexOf('credential') !== -1 || raw.indexOf('graphql.execution') !== -1) {
+                        errEl.textContent = 'Incorrect username or password';
+                    } else {
+                        errEl.textContent = raw || 'Invalid username or password';
+                    }
+                    errEl.style.display = 'block';
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Log In';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
+

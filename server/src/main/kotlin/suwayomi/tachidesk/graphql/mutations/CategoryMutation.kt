@@ -2,9 +2,11 @@
 
 package suwayomi.tachidesk.graphql.mutations
 
+import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.LikePattern
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
@@ -19,8 +21,11 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import suwayomi.tachidesk.global.impl.sync.SyncYomiSyncService
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.getAttribute
 import suwayomi.tachidesk.graphql.types.CategoryMetaType
 import suwayomi.tachidesk.graphql.types.CategoryType
+import suwayomi.tachidesk.server.JavalinSetup.Attribute
+import suwayomi.tachidesk.server.user.idOrNull
 import suwayomi.tachidesk.graphql.types.MangaType
 import suwayomi.tachidesk.graphql.types.MetaInput
 import suwayomi.tachidesk.manga.impl.Category
@@ -369,10 +374,16 @@ class CategoryMutation {
     )
 
     @RequireAuth
-    fun createCategory(input: CreateCategoryInput): CreateCategoryPayload? {
+    fun createCategory(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: CreateCategoryInput,
+    ): CreateCategoryPayload? {
         val (clientMutationId, name, order, default, includeInUpdate, includeInDownload) = input
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
+
         transaction {
-            require(CategoryTable.selectAll().where { CategoryTable.name eq input.name }.isEmpty()) {
+            require(CategoryTable.selectAll().where { (CategoryTable.name eq input.name) and (CategoryTable.user eq userId) }.isEmpty()) {
                 "'name' must be unique"
             }
         }
@@ -388,7 +399,7 @@ class CategoryMutation {
         val category =
             transaction {
                 if (order != null) {
-                    CategoryTable.update({ CategoryTable.order greaterEq order }) {
+                    CategoryTable.update({ (CategoryTable.order greaterEq order) and (CategoryTable.user eq userId) }) {
                         it[CategoryTable.order] = CategoryTable.order + 1
                     }
                 }
@@ -397,6 +408,7 @@ class CategoryMutation {
                     CategoryTable.insertAndGetId {
                         it[CategoryTable.name] = input.name
                         it[CategoryTable.order] = order ?: Int.MAX_VALUE
+                        it[CategoryTable.user] = EntityID(userId, suwayomi.tachidesk.server.user.model.UserTable)
                         if (default != null) {
                             it[CategoryTable.isDefault] = default
                         }

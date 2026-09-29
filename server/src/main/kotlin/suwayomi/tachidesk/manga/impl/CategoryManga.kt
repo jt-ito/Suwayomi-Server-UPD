@@ -11,13 +11,11 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.leftJoin
 import org.jetbrains.exposed.v1.core.max
-import org.jetbrains.exposed.v1.core.wrapAsExpression
 import org.jetbrains.exposed.v1.jdbc.batchUpsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -28,6 +26,9 @@ import suwayomi.tachidesk.manga.model.dataclass.CategoryDataClass
 import suwayomi.tachidesk.manga.model.dataclass.MangaDataClass
 import suwayomi.tachidesk.manga.model.table.CategoryMangaTable
 import suwayomi.tachidesk.manga.model.table.CategoryTable
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.distinctChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.downloadedChapterCount
+import suwayomi.tachidesk.manga.model.table.ChapterDedup.unreadChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
 import suwayomi.tachidesk.manga.model.table.toDataClass
@@ -99,37 +100,12 @@ object CategoryManga {
      * list of mangas that belong to a category
      */
     fun getCategoryMangaList(categoryId: Int): List<MangaDataClass> {
-        // Select the required columns from the MangaTable and add the aggregate functions to compute unread, download, and chapter counts
-        val unreadCount =
-            wrapAsExpression<Long>(
-                ChapterTable
-                    .select(
-                        ChapterTable.id.count(),
-                    ).where { ((ChapterTable.isRead eq false) and (ChapterTable.manga eq MangaTable.id)) },
-            )
-        val downloadedCount =
-            wrapAsExpression<Long>(
-                ChapterTable
-                    .select(
-                        ChapterTable.id.count(),
-                    ).where { ((ChapterTable.isDownloaded eq true) and (ChapterTable.manga eq MangaTable.id)) },
-            )
-
-        val chapterCount = ChapterTable.id.count().alias("chapter_count")
+        // Some sources release the same chapter under multiple scanlators, which would
+        // inflate a plain COUNT(*) — unread/download/chapter counts are computed from the
+        // raw chapter rows below (via ChapterDedup) instead of as SQL aggregates, so
+        // duplicate scanlator copies of the same chapter are only counted once.
         val lastReadAt = ChapterTable.lastReadAt.max().alias("last_read_at")
-        val selectedColumns = MangaTable.columns + unreadCount + downloadedCount + chapterCount + lastReadAt
-
-        val transform: (ResultRow) -> MangaDataClass = {
-            // Map the data from the result row to the MangaDataClass
-            MangaTable
-                .toDataClass(it)
-                .copy(
-                    lastReadAt = it[lastReadAt],
-                    unreadCount = it[unreadCount],
-                    downloadCount = it[downloadedCount],
-                    chapterCount = it[chapterCount],
-                )
-        }
+        val selectedColumns = MangaTable.columns + lastReadAt
 
         return transaction {
             // Fetch data from the MangaTable and join with the CategoryMangaTable, if a category is specified
@@ -148,8 +124,34 @@ object CategoryManga {
                         .where { (MangaTable.inLibrary eq true) and (CategoryMangaTable.category eq categoryId) }
                 }
 
-            // Join with the ChapterTable to fetch the last read chapter for each manga
-            query.groupBy(*MangaTable.columns.toTypedArray()).map(transform)
+            val mangaRows = query.groupBy(*MangaTable.columns.toTypedArray()).toList()
+            val mangaIds = mangaRows.map { it[MangaTable.id].value }
+
+            val chaptersByManga =
+                if (mangaIds.isEmpty()) {
+                    emptyMap()
+                } else {
+                    ChapterTable
+                        .select(ChapterTable.manga, ChapterTable.chapter_number, ChapterTable.name, ChapterTable.isRead, ChapterTable.isDownloaded)
+                        .where { ChapterTable.manga inList mangaIds }
+                        .toList()
+                        .groupBy { it[ChapterTable.manga].value }
+                }
+
+            val chapterNumberOf: (ResultRow) -> Float = { it[ChapterTable.chapter_number] }
+            val chapterNameOf: (ResultRow) -> String = { it[ChapterTable.name] }
+
+            mangaRows.map { row ->
+                val chapters = chaptersByManga[row[MangaTable.id].value].orEmpty()
+                MangaTable
+                    .toDataClass(row)
+                    .copy(
+                        lastReadAt = row[lastReadAt],
+                        unreadCount = chapters.unreadChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isRead] }.toLong(),
+                        downloadCount = chapters.downloadedChapterCount(chapterNumberOf, chapterNameOf) { it[ChapterTable.isDownloaded] }.toLong(),
+                        chapterCount = chapters.distinctChapterCount(chapterNumberOf, chapterNameOf).toLong(),
+                    )
+            }
         }
     }
 

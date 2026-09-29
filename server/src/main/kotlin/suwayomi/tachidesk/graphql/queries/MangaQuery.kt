@@ -13,15 +13,21 @@ import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.getAttribute
+import suwayomi.tachidesk.server.JavalinSetup.Attribute
+import suwayomi.tachidesk.server.user.idOrNull
 import suwayomi.tachidesk.graphql.queries.filter.BooleanFilter
 import suwayomi.tachidesk.graphql.queries.filter.ComparableScalarFilter
 import suwayomi.tachidesk.graphql.queries.filter.Filter
@@ -230,6 +236,7 @@ class MangaQuery {
 
     @RequireAuth
     fun mangas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: MangaCondition? = null,
         filter: MangaFilter? = null,
         @GraphQLDeprecated(
@@ -249,7 +256,10 @@ class MangaQuery {
         last: Int? = null,
         offset: Int? = null,
     ): MangaNodeList {
-        val queryResults =
+        val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
+        val userId = userType?.idOrNull ?: 1
+
+        val (queryResults, resultsAsType) =
             transaction {
                 val mangaIdsQuery =
                     MangaTable
@@ -264,6 +274,22 @@ class MangaQuery {
                     } else {
                         MangaTable.selectAll().applyOps(condition, filter)
                     }
+
+                // If filtering for library and user is not admin (or user has personal library entries)
+                if (condition?.inLibrary == true || filter?.inLibrary?.equalTo == true) {
+                    if (userId != 1) {
+                        res.andWhere {
+                            MangaTable.id inSubQuery (
+                                suwayomi.tachidesk.manga.model.table.UserMangaTable
+                                    .select(suwayomi.tachidesk.manga.model.table.UserMangaTable.manga)
+                                    .where {
+                                        (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
+                                            (suwayomi.tachidesk.manga.model.table.UserMangaTable.inLibrary eq true)
+                                    }
+                            )
+                        }
+                    }
+                }
 
                 val baseSort = listOf(MangaOrder(MangaOrderBy.ID, SortOrder.ASC))
                 val deprecatedSort = listOfNotNull(orderBy?.let { MangaOrder(orderBy, orderByType) })
@@ -284,12 +310,12 @@ class MangaQuery {
                     res.limit(last)
                 }
 
-                QueryResults(total, firstResult, lastResult, res.toList())
+                val rowList = res.toList()
+                val mapped = rowList.map { MangaType(it, userId) }
+                Pair(QueryResults(total, firstResult, lastResult, rowList), mapped)
             }
 
         val getAsCursor: (MangaType) -> Cursor = (order?.firstOrNull()?.by ?: MangaOrderBy.ID)::asCursor
-
-        val resultsAsType = queryResults.results.map { MangaType(it) }
 
         return MangaNodeList(
             resultsAsType,
