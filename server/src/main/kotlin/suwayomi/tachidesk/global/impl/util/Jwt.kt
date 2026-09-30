@@ -9,6 +9,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import suwayomi.tachidesk.server.serverConfig
+import suwayomi.tachidesk.server.user.UserManager
 import suwayomi.tachidesk.server.user.UserType
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -88,8 +89,11 @@ object Jwt {
             "Token intended for different audience ${jwt.audience}"
         }
         val userId = jwt.getClaim("user_id").asInt() ?: 1
-        val username = jwt.getClaim("username").asString() ?: "admin"
-        val role = jwt.getClaim("role").asString() ?: "ADMIN"
+        // same as verifyJwt: refreshing must not resurrect deleted accounts or outdated roles
+        val currentUser = UserManager.getUser(userId)
+        require(currentUser != null || userId == 1) { "The account no longer exists" }
+        val username = currentUser?.username ?: jwt.getClaim("username").asString() ?: "admin"
+        val role = currentUser?.role ?: jwt.getClaim("role").asString() ?: "ADMIN"
         return createAccessToken(userId, username, role)
     }
 
@@ -105,7 +109,13 @@ object Jwt {
             }
 
             val userId = decodedJWT.getClaim("user_id").asInt() ?: 1
-            val role = decodedJWT.getClaim("role").asString() ?: "ADMIN"
+            // the role claim may be stale (demoted while a token is still valid), so the database decides; a token
+            // of a deleted account is worthless
+            val currentUser = UserManager.getUser(userId)
+            if (currentUser == null && userId != 1) {
+                return UserType.Visitor
+            }
+            val role = currentUser?.role ?: decodedJWT.getClaim("role").asString() ?: "ADMIN"
 
             return if (role.equals("ADMIN", ignoreCase = true)) {
                 UserType.Admin(userId)

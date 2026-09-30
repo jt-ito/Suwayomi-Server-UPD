@@ -130,7 +130,8 @@ object UserManager {
         val cleanUsername = username.trim()
         validateUsername(cleanUsername)
         validatePassword(password)
-        val normalizedRole = if (role.equals("ADMIN", ignoreCase = true)) "ADMIN" else "MEMBER"
+        require(role.uppercase() in setOf("ADMIN", "MEMBER")) { "Role must be ADMIN or MEMBER" }
+        val normalizedRole = role.uppercase()
 
         return transaction {
             val existing = UserTable.selectAll().where { UserTable.username eq cleanUsername }.firstOrNull()
@@ -204,7 +205,8 @@ object UserManager {
                     it[UserTable.passwordHash] = hash
                 }
                 if (!newRole.isNullOrBlank()) {
-                    it[role] = if (newRole.equals("ADMIN", ignoreCase = true)) "ADMIN" else "MEMBER"
+                    require(newRole.uppercase() in setOf("ADMIN", "MEMBER")) { "Role must be ADMIN or MEMBER" }
+                    it[role] = newRole.uppercase()
                 }
             }
 
