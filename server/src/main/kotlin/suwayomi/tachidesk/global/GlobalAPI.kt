@@ -29,6 +29,8 @@ object GlobalAPI {
         }
         path("webview") {
             get("", WebViewController.webview)
+            get("user-agent", WebViewController.userAgent)
+            post("cookies", WebViewController.importCookies)
             ws("", WebViewController::webviewWS)
         }
         path("database") {
