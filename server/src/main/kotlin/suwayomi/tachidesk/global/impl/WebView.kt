@@ -102,6 +102,13 @@ object WebView : Websocket<String>() {
     @SerialName("ping")
     class JsPingMessage : TypeObject()
 
+    // sent by the client when its tab gets hidden/shown, so nothing is rendered while nobody can see it
+    @Serializable
+    @SerialName("visibility")
+    class JsVisibilityMessage(
+        val hidden: Boolean,
+    ) : TypeObject()
+
     // sent by the client after displaying (or dropping) a rendered frame
     @Serializable
     @SerialName("frameAck")
@@ -137,6 +144,10 @@ object WebView : Websocket<String>() {
 
                 is JsPingMessage -> {
                     notifyAllClients("{\"type\":\"pong\"}")
+                }
+
+                is JsVisibilityMessage -> {
+                    dr.setHidden(event.hidden)
                 }
 
                 is JsFrameAckMessage -> {

@@ -70,6 +70,15 @@ class KcefWebView {
     private var width = 1000
     private var height = 1000
 
+    private val frameRateScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val isBoosted = AtomicBoolean(false)
+
+    @Volatile
+    private var lastInputNanos = 0L
+
+    @Volatile
+    private var isHidden = false
+
     companion object {
         private val networkHelper: NetworkHelper by injectLazy()
 
@@ -90,7 +99,13 @@ class KcefWebView {
         private const val MAX_FRAMES_IN_FLIGHT = 2
         private const val FRAME_ACK_TIMEOUT_MS = 500L
 
-        private const val WINDOWLESS_FRAME_RATE = 60
+        // CEF only repaints on change, but animated pages (ads, carousels) repaint at the full rate, which costs cpu for
+        // rendering + encoding. So: 30fps while idle, 60fps for a moment after any user input (scrolling has to look
+        // smooth), and 1fps while the client's tab is hidden.
+        private const val FRAME_RATE_IDLE = 30
+        private const val FRAME_RATE_ACTIVE = 60
+        private const val FRAME_RATE_HIDDEN = 1
+        private const val ACTIVE_BOOST_MS = 1500L
 
         fun Cookie.toCefCookie(): CefCookie {
             val cookie = this
@@ -309,7 +324,8 @@ class KcefWebView {
             width: Int,
             height: Int,
         ) {
-            if (!WebView.hasClients) return
+            // nothing changed (or nobody is looking): skip copying and encoding the frame
+            if (!WebView.hasClients || isHidden || dirtyRects.isEmpty()) return
 
             synchronized(lock) {
                 var image = latestImage
@@ -498,6 +514,8 @@ class KcefWebView {
     }
 
     fun destroy() {
+        frameRateScope.coroutineContext.cancelChildren()
+        isBoosted.set(false)
         renderHandler.close()
         flush()
         browser?.close(true)
@@ -520,9 +538,41 @@ class KcefWebView {
                 ).apply {
                     // NOTE: Without this, we don't seem to be receiving any events
                     createImmediately()
-                    // the default is 30fps, which makes scrolling look choppy
-                    setWindowlessFrameRate(WINDOWLESS_FRAME_RATE)
+                    setWindowlessFrameRate(FRAME_RATE_IDLE)
                 }
+        isBoosted.set(false)
+        boostFrameRate()
+    }
+
+    // the idle rate makes scrolling look choppy, so input raises it to 60fps until the user has been idle for a moment
+    private fun boostFrameRate() {
+        lastInputNanos = System.nanoTime()
+        if (isHidden || !isBoosted.compareAndSet(false, true)) return
+
+        browser?.setWindowlessFrameRate(FRAME_RATE_ACTIVE)
+        frameRateScope.launch {
+            while (System.nanoTime() - lastInputNanos < ACTIVE_BOOST_MS * 1_000_000L) {
+                delay(250)
+            }
+            isBoosted.set(false)
+            if (!isHidden) {
+                browser?.setWindowlessFrameRate(FRAME_RATE_IDLE)
+            }
+        }
+    }
+
+    fun setHidden(hidden: Boolean) {
+        isHidden = hidden
+        if (hidden) {
+            browser?.setWindowlessFrameRate(FRAME_RATE_HIDDEN)
+            return
+        }
+
+        browser?.setWindowlessFrameRate(FRAME_RATE_IDLE)
+        // CEF only paints on change, so ask for the page to be painted again for the client that just came back
+        browser?.wasResized(width, height)
+        isBoosted.set(false)
+        boostFrameRate()
     }
 
     fun resize(
@@ -780,6 +830,7 @@ class KcefWebView {
     }
 
     fun event(msg: WebView.JsEventMessage) {
+        boostFrameRate()
         val component = browser?.uiComponent ?: return
         val type = msg.eventType
         val clickX = msg.clickX

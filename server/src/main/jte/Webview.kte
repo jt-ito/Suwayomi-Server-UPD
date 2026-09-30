@@ -894,6 +894,13 @@
                 });
                 observer.observe(frame);
 
+                // a hidden tab has nobody to show frames to: let the server stop rendering/encoding until it is shown again
+                document.addEventListener('visibilitychange', () => {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'visibility', hidden: document.hidden }));
+                    }
+                });
+
                 let pendingMouseMove = null;
                 let mouseMoveTimer = null;
 

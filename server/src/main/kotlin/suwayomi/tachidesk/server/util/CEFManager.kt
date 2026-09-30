@@ -126,6 +126,10 @@ object CEFManager {
                                     "--enable-widevine-cdm",
                                     // #1736 JCEF does implement stack guards properly
                                     "--change-stack-guard-on-fork=disable",
+                                    // nothing here needs these (background chatter, crash reporting, translate/cast UI)
+                                    "--disable-background-networking",
+                                    "--disable-breakpad",
+                                    "--disable-features=TranslateUI,MediaRouter,OptimizationHints",
                                 ),
                             )
                             cefSettings.apply {
