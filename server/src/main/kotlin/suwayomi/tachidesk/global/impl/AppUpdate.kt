@@ -23,46 +23,20 @@ data class UpdateDataClass(
 )
 
 object AppUpdate {
-    private const val LATEST_STABLE_CHANNEL_URL = "https://api.github.com/repos/Suwayomi/Suwayomi-Server/releases/latest"
-    private const val LATEST_PREVIEW_CHANNEL_URL = "https://api.github.com/repos/Suwayomi/Suwayomi-Server-preview/releases/latest"
+    private const val LATEST_STABLE_CHANNEL_URL = "https://api.github.com/repos/jt-ito/Suwayomi-Server-UPD/releases/latest"
+    private const val LATEST_PREVIEW_CHANNEL_URL = "https://api.github.com/repos/jt-ito/Suwayomi-Server-UPD/releases/latest"
 
     private val json: Json by injectLazy()
     private val network: NetworkHelper by injectLazy()
 
-    suspend fun checkUpdate(): List<UpdateDataClass> {
-        val stableJson =
-            json
-                .parseToJsonElement(
-                    network.client
-                        .newCall(
-                            GET(LATEST_STABLE_CHANNEL_URL),
-                        ).await()
-                        .body
-                        .string(),
-                ).jsonObject
-
-        val previewJson =
-            json
-                .parseToJsonElement(
-                    network.client
-                        .newCall(
-                            GET(LATEST_PREVIEW_CHANNEL_URL),
-                        ).await()
-                        .body
-                        .string(),
-                ).jsonObject
-
-        return listOf(
-            UpdateDataClass(
-                "Stable",
-                stableJson["tag_name"]!!.jsonPrimitive.content,
-                stableJson["html_url"]!!.jsonPrimitive.content,
-            ),
-            UpdateDataClass(
-                "Preview",
-                previewJson["tag_name"]!!.jsonPrimitive.content,
-                previewJson["html_url"]!!.jsonPrimitive.content,
-            ),
-        )
-    }
+    suspend fun checkUpdate(): List<UpdateDataClass> =
+        listOf("Stable" to LATEST_STABLE_CHANNEL_URL, "Preview" to LATEST_PREVIEW_CHANNEL_URL).mapNotNull { (channel, url) ->
+            val release =
+                json
+                    .parseToJsonElement(network.client.newCall(GET(url)).await().body.string())
+                    .jsonObject
+            // a repo without releases answers 404 without tag_name; report no update for that channel
+            val tag = release["tag_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            UpdateDataClass(channel, tag, release["html_url"]!!.jsonPrimitive.content)
+        }
 }
