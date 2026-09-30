@@ -371,37 +371,10 @@ object DatabaseMigrationService {
                     databaseConfig = migrationDbConfig(Schema("suwayomi")),
                 )
 
-            // Step 6: Disable constraints and triggers in PostgreSQL during import, and clear out whatever
-            // databaseUp() just seeded on this fresh target (e.g. the default admin user from M0066) - a
-            // migration replaces the target's contents, it doesn't merge with them.
-            transaction(targetDb) {
-                exec("SET session_replication_role = 'replica';")
-                clearTargetTables()
-            }
-
-            val migrationStats = mutableMapOf<String, Long>()
-
-            // Step 7: Transfer data for all tables in topological order
-            for (table in TABLES_TO_MIGRATE) {
-                val count = copyTableData(h2Db, targetDb, table)
-                migrationStats[table.tableName] = count
-                logger.info { "Migrated table ${table.tableName}: $count rows transferred." }
-            }
-
-            // Step 8: Re-enable constraints and reset sequences in PostgreSQL
-            transaction(targetDb) {
-                exec("SET session_replication_role = 'origin';")
-
-                for (tbl in SEQUENCE_TABLE_NAMES) {
-                    try {
-                        exec(
-                            "SELECT setval(pg_get_serial_sequence('suwayomi.$tbl', 'id'), COALESCE((SELECT MAX(id) FROM suwayomi.$tbl), 1));",
-                        )
-                    } catch (e: Exception) {
-                        logger.debug(e) { "Sequence set for suwayomi.$tbl skipped or failed: ${e.message}" }
-                    }
-                }
-            }
+            // Steps 6-8: clear whatever databaseUp() just seeded on this fresh target (e.g. the default admin
+            // user from M0066), then transfer every table and resync PostgreSQL's sequences - a migration
+            // replaces the target's contents, it doesn't merge with them.
+            val migrationStats = copyAllTablesIntoPostgres(h2Db, targetDb)
 
             val backendDescription = if (rawParams.useEmbedded) "the built-in PostgreSQL" else "PostgreSQL"
             logger.info { "Database migration from H2 to PostgreSQL completed successfully! Stats: $migrationStats" }
@@ -566,7 +539,7 @@ object DatabaseMigrationService {
     // spelling, which doesn't match the uppercase H2 folds unquoted DDL into - "Column not found" on every
     // such column. These ad-hoc migration connections don't inherit the main pool's config, so they need it too.
     @OptIn(ExperimentalKeywordApi::class)
-    private fun migrationDbConfig(schema: Schema? = null) =
+    internal fun migrationDbConfig(schema: Schema? = null) =
         DatabaseConfig {
             preserveKeywordCasing = false
             if (schema != null) defaultSchema = schema
@@ -579,6 +552,46 @@ object DatabaseMigrationService {
         for (table in TABLES_TO_MIGRATE.asReversed()) {
             table.deleteAll()
         }
+    }
+
+    /**
+     * Copies every table from [sourceDb] into a PostgreSQL [targetDb], replacing whatever the target's own
+     * schema migrations seeded (e.g. the default admin user) - shared by the H2->PostgreSQL migration and by
+     * [EmbeddedPostgresManager]'s automatic major-version upgrade (source there is the old-major PostgreSQL
+     * cluster, read via a temporarily-started old server binary, since Postgres refuses to start against a
+     * data directory from a different major version at all - there's never a risk of touching it via the
+     * wrong binary).
+     */
+    internal fun copyAllTablesIntoPostgres(
+        sourceDb: Database,
+        targetDb: Database,
+    ): Map<String, Long> {
+        transaction(targetDb) {
+            exec("SET session_replication_role = 'replica';")
+            clearTargetTables()
+        }
+
+        val migrationStats = mutableMapOf<String, Long>()
+        for (table in TABLES_TO_MIGRATE) {
+            val count = copyTableData(sourceDb, targetDb, table)
+            migrationStats[table.tableName] = count
+            logger.info { "Migrated table ${table.tableName}: $count rows transferred." }
+        }
+
+        transaction(targetDb) {
+            exec("SET session_replication_role = 'origin';")
+            for (tbl in SEQUENCE_TABLE_NAMES) {
+                try {
+                    exec(
+                        "SELECT setval(pg_get_serial_sequence('suwayomi.$tbl', 'id'), COALESCE((SELECT MAX(id) FROM suwayomi.$tbl), 1));",
+                    )
+                } catch (e: Exception) {
+                    logger.debug(e) { "Sequence set for suwayomi.$tbl skipped or failed: ${e.message}" }
+                }
+            }
+        }
+
+        return migrationStats
     }
 
     private fun <T : Table> copyTableData(
@@ -614,6 +627,16 @@ object DatabaseMigrationService {
                 }
             }
             offset += rows.size
+        }
+
+        // Defense-in-depth beyond batchInsert()'s own throw-on-failure guarantee: re-count the target so a
+        // silent short copy (e.g. a trigger or constraint quietly dropping rows) is caught here, before any
+        // caller acts on a copy that looks complete but isn't.
+        val copiedRows = transaction(targetDb) { table.selectAll().count() }
+        if (copiedRows != totalRows) {
+            throw IllegalStateException(
+                "Row count mismatch copying \"${table.tableName}\": source had $totalRows, target has $copiedRows",
+            )
         }
 
         return totalRows
