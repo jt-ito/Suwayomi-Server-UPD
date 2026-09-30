@@ -31,11 +31,15 @@ object AppUpdate {
 
     suspend fun checkUpdate(): List<UpdateDataClass> =
         listOf("Stable" to LATEST_STABLE_CHANNEL_URL, "Preview" to LATEST_PREVIEW_CHANNEL_URL).mapNotNull { (channel, url) ->
-            val release =
-                json
-                    .parseToJsonElement(network.client.newCall(GET(url)).await().body.string())
-                    .jsonObject
-            // a repo without releases answers 404 without tag_name; report no update for that channel
+            // GitHub answers 404 for a repo that has no release yet; that means "no update", not a failed check
+            val response =
+                try {
+                    network.client.newCall(GET(url)).await().body.string()
+                } catch (e: Exception) {
+                    if (e.message == "HTTP error 404") return@mapNotNull null
+                    throw e
+                }
+            val release = json.parseToJsonElement(response).jsonObject
             val tag = release["tag_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
             UpdateDataClass(channel, tag, release["html_url"]!!.jsonPrimitive.content)
         }
