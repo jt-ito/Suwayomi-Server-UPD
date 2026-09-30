@@ -18,7 +18,9 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import suwayomi.tachidesk.global.model.table.GlobalMetaTable
 import suwayomi.tachidesk.graphql.types.DatabaseType
@@ -36,8 +38,9 @@ import kotlin.io.path.createTempDirectory
  * row, runs the real upgrade path against it, and verifies that row survives into a real, freshly-started
  * PostgreSQL 14 cluster. This is slow (two real initdb/startups plus a network download) and needs internet
  * access - it is not part of the fast default suite, run it manually when touching the upgrade path:
- * `./gradlew server:test --tests "*EmbeddedPostgresUpgradeLiveTest*"`
+ * `./gradlew server:test -Plivetest --tests "*EmbeddedPostgresUpgradeLiveTest*"`
  */
+@Tag("live")
 class EmbeddedPostgresUpgradeLiveTest {
     companion object {
         // just enough app bootstrap for serverConfig/Koin to exist so referencing table definitions
@@ -54,6 +57,13 @@ class EmbeddedPostgresUpgradeLiveTest {
             // the calling precondition in DBManager) - some migrations pick their SQL dialect off this global,
             // not off which connection they're actually given, so the test must match that precondition too.
             serverConfig.databaseType.value = DatabaseType.POSTGRESQL
+        }
+
+        // the setting is persisted to server.conf and shared with every other test in the JVM
+        @AfterAll
+        @JvmStatic
+        fun afterAll() {
+            serverConfig.databaseType.value = DatabaseType.H2
         }
     }
 

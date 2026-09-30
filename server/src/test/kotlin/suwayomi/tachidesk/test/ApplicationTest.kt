@@ -59,6 +59,12 @@ open class ApplicationTest {
         private var initializedTheApp = false
 
         fun testingSetup() {
+            // never touch the developer's real data directory (and its server.conf): tests that only call this
+            // function would otherwise read, and even persist changes to, the live configuration
+            if (System.getProperty("$CONFIG_PREFIX.server.rootDir") == null) {
+                System.setProperty("$CONFIG_PREFIX.server.rootDir", File(BASE_PATH).absolutePath)
+            }
+
             // register Tachidesk's config which is dubbed "ServerConfig"
             SettingsRegistry.clear()
             ConfigTypeRegistration.registerCustomTypes()

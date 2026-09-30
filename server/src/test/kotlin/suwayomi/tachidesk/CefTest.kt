@@ -28,6 +28,8 @@ class CefTest {
                         }
                     }
                 }
+            // other tests in the same JVM may have left their own Koin application running
+            stopKoin()
             startKoin {
                 modules(module)
             }

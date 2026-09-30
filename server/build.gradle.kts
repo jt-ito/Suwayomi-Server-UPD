@@ -198,9 +198,22 @@ tasks {
     }
 
     test {
+        // JVM-wide, so it is in place before any test class touches the config: tests must never read or write the
+        // developer's real data directory (and its server.conf)
+        systemProperty(
+            "suwayomi.tachidesk.config.server.rootDir",
+            layout.buildDirectory
+                .dir("tmp/TestDesk")
+                .get()
+                .asFile.absolutePath,
+        )
         useJUnitPlatform {
             if (!project.hasProperty("masstest")) {
                 exclude("**/masstest/*")
+            }
+            // slow tests that need network access and real PostgreSQL clusters: run with -Plivetest
+            if (!project.hasProperty("livetest")) {
+                excludeTags("live")
             }
         }
         testLogging {
