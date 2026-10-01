@@ -21,6 +21,7 @@ import org.cef.browser.CefFrame
 import org.cef.browser.CefRendering
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandler
+import org.cef.handler.CefScreenInfo
 import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.handler.CefRenderHandlerAdapter
 import org.cef.handler.CefRequestHandlerAdapter
@@ -53,6 +54,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Date
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.sqrt
 import java.util.concurrent.atomic.AtomicInteger
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
@@ -78,6 +80,14 @@ class KcefWebView {
 
     @Volatile
     private var isHidden = false
+
+    // pixels per css pixel the page is rendered with, so text is sharp on high density screens
+    @Volatile
+    private var deviceScale = 1.0
+
+    // video stream of the page; while it is connected the jpeg frames are not produced
+    @Volatile
+    private var streamer: WebRtcStreamer? = null
 
     companion object {
         private val networkHelper: NetworkHelper by injectLazy()
@@ -106,6 +116,11 @@ class KcefWebView {
         private const val FRAME_RATE_ACTIVE = 60
         private const val FRAME_RATE_HIDDEN = 1
         private const val ACTIVE_BOOST_MS = 1500L
+
+        // rendering at the screen's density is sharper, but every frame has to be converted/encoded/sent: stay below
+        // roughly this many pixels per frame (about 1080p), and never above 2x
+        private const val MAX_FRAME_PIXELS = 2_500_000.0
+        private const val MAX_DEVICE_SCALE = 2.0
 
         fun Cookie.toCefCookie(): CefCookie {
             val cookie = this
@@ -310,11 +325,33 @@ class KcefWebView {
 
 
         private var encodeImage: BufferedImage? = null
+        private var videoDirty = false
+        private var videoBuffer: ByteBuffer? = null
+        private val isVideoPushing = AtomicBoolean(false)
         private val isEncoding = AtomicBoolean(false)
         private val framesInFlight = AtomicInteger(0)
         private val encodeScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
         override fun getViewRect(browser: CefBrowser): Rectangle = Rectangle(0, 0, width, height)
+
+        override fun getScreenInfo(
+            browser: CefBrowser,
+            screenInfo: CefScreenInfo,
+        ): Boolean {
+            screenInfo.device_scale_factor = deviceScale
+            screenInfo.depth = 24
+            screenInfo.depth_per_component = 8
+            screenInfo.is_monochrome = false
+            screenInfo.x = 0
+            screenInfo.y = 0
+            screenInfo.width = width
+            screenInfo.height = height
+            screenInfo.available_x = 0
+            screenInfo.available_y = 0
+            screenInfo.available_width = width
+            screenInfo.available_height = height
+            return true
+        }
 
         override fun onPaint(
             browser: CefBrowser,
@@ -324,8 +361,11 @@ class KcefWebView {
             width: Int,
             height: Int,
         ) {
-            // nothing changed (or nobody is looking): skip copying and encoding the frame
-            if (!WebView.hasClients || isHidden || dirtyRects.isEmpty()) return
+            // nobody is looking: skip copying and encoding the frame. (Not skipping on an empty dirty area: CEF does not
+            // always fill it in, e.g. after navigating, and dropping those frames froze the picture.)
+            if (!WebView.hasClients || isHidden) return
+
+            val videoStream = streamer?.takeIf { it.isConnected }
 
             synchronized(lock) {
                 var image = latestImage
@@ -344,6 +384,69 @@ class KcefWebView {
                 lastPaintNanos = now
             }
 
+            if (videoStream != null) {
+                // the page is shown as video: no jpeg needed. Converting and handing the frame to the encoder happens off
+                // this thread, since blocking CEF's paint thread is what lowers the page's frame rate.
+                synchronized(lock) { videoDirty = true }
+                scheduleVideoPush()
+                return
+            }
+
+            scheduleEncode()
+        }
+
+        /** Sends the last painted frame again, e.g. right after the video connected, or to keep a still page alive. */
+        fun pushLatestFrame() {
+            synchronized(lock) { videoDirty = latestImage != null }
+            scheduleVideoPush()
+        }
+
+        private fun scheduleVideoPush() {
+            if (!isVideoPushing.compareAndSet(false, true)) {
+                return
+            }
+
+            encodeScope.launch {
+                try {
+                    while (true) {
+                        val stream = streamer?.takeIf { it.isConnected } ?: break
+                        val size =
+                            synchronized(lock) {
+                                val image = latestImage
+                                if (!videoDirty || image == null) {
+                                    return@synchronized null
+                                }
+                                videoDirty = false
+
+                                val pixels = (image.raster.dataBuffer as DataBufferInt).data
+                                var buf = videoBuffer
+                                if (buf == null || buf.capacity() < pixels.size * 4) {
+                                    buf = ByteBuffer.allocateDirect(pixels.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+                                    videoBuffer = buf
+                                }
+                                buf.clear()
+                                buf.asIntBuffer().put(pixels)
+                                image.width to image.height
+                            } ?: break
+                        stream.pushFrame(videoBuffer!!, size.first, size.second)
+                    }
+                } catch (t: Throwable) {
+                    logger.debug(t) { "Failed to push webview video frame" }
+                } finally {
+                    isVideoPushing.set(false)
+                }
+
+                if (synchronized(lock) { videoDirty }) {
+                    scheduleVideoPush()
+                }
+            }
+        }
+
+        fun millisSinceLastPaint(): Long = (System.nanoTime() - lastPaintNanos) / 1_000_000L
+
+        /** The video stream ended: continue with jpeg frames, starting with the current one. */
+        fun resumeJpegStream() {
+            synchronized(lock) { hasNewFrame = true }
             scheduleEncode()
         }
 
@@ -513,7 +616,56 @@ class KcefWebView {
         }
     }
 
+    fun handleRtcOffer(sdp: String) {
+        stopRtc()
+        try {
+            streamer =
+                WebRtcStreamer(
+                    sendSignal = { WebView.notifyAllClients(it) },
+                    onConnectionChange = ::onRtcConnectionChange,
+                ).also { it.handleOffer(sdp) }
+        } catch (e: Throwable) {
+            // e.g. no native library for this platform: the client keeps using the jpeg frames
+            logger.warn(e) { "WebRTC is not available, using jpeg frames" }
+            streamer = null
+        }
+    }
+
+    fun handleRtcIce(
+        candidate: String,
+        sdpMid: String?,
+        sdpMLineIndex: Int,
+    ) {
+        streamer?.addRemoteCandidate(candidate, sdpMid, sdpMLineIndex)
+    }
+
+    fun stopRtc() {
+        val current = streamer ?: return
+        streamer = null
+        current.close()
+    }
+
+    private fun onRtcConnectionChange(connected: Boolean) {
+        if (connected) {
+            browser?.setWindowlessFrameRate(FRAME_RATE_ACTIVE)
+            renderHandler.pushLatestFrame()
+            // CEF only paints when the page changes, but the video needs a frame now and then (for new keyframes)
+            frameRateScope.launch {
+                while (streamer?.isConnected == true) {
+                    delay(1000)
+                    val current = streamer ?: break
+                    if (current.isConnected && renderHandler.millisSinceLastPaint() > 900) {
+                        renderHandler.pushLatestFrame()
+                    }
+                }
+            }
+        } else {
+            renderHandler.resumeJpegStream()
+        }
+    }
+
     fun destroy() {
+        stopRtc()
         frameRateScope.coroutineContext.cancelChildren()
         isBoosted.set(false)
         renderHandler.close()
@@ -556,12 +708,16 @@ class KcefWebView {
             }
             isBoosted.set(false)
             if (!isHidden) {
-                browser?.setWindowlessFrameRate(FRAME_RATE_IDLE)
+                browser?.setWindowlessFrameRate(idleFrameRate())
             }
         }
     }
 
+    // the video stream can carry the full rate without the cost of encoding a jpeg per frame
+    private fun idleFrameRate() = if (streamer?.isConnected == true) FRAME_RATE_ACTIVE else FRAME_RATE_IDLE
+
     fun setHidden(hidden: Boolean) {
+        logger.info { "WebView tab hidden=$hidden" }
         isHidden = hidden
         if (hidden) {
             browser?.setWindowlessFrameRate(FRAME_RATE_HIDDEN)
@@ -578,9 +734,19 @@ class KcefWebView {
     fun resize(
         width: Int,
         height: Int,
+        devicePixelRatio: Double = 1.0,
     ) {
         this.width = width
         this.height = height
+
+        val budgetScale = sqrt(MAX_FRAME_PIXELS / (width.toDouble() * height).coerceAtLeast(1.0))
+        val scale = devicePixelRatio.coerceIn(1.0, MAX_DEVICE_SCALE).coerceAtMost(budgetScale.coerceAtLeast(1.0))
+        val scaleChanged = scale != deviceScale
+        deviceScale = scale
+
+        if (scaleChanged) {
+            browser?.notifyScreenInfoChanged()
+        }
         browser?.wasResized(width, height)
     }
 

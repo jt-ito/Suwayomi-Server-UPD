@@ -33,8 +33,10 @@ object WebView : Websocket<String>() {
     override fun removeClient(ctx: WsContext) {
         super.removeClient(ctx)
         if (clients.isEmpty()) {
+            val start = System.nanoTime()
             driver?.destroy()
             driver = null
+            logger.info { "WebView closed in ${(System.nanoTime() - start) / 1_000_000} ms" }
         }
     }
 
@@ -61,6 +63,7 @@ object WebView : Websocket<String>() {
         val url: String,
         val width: Int,
         val height: Int,
+        val dpr: Double = 1.0,
     ) : TypeObject()
 
     @Serializable
@@ -68,6 +71,7 @@ object WebView : Websocket<String>() {
     private data class ResizeMessage(
         val width: Int,
         val height: Int,
+        val dpr: Double = 1.0,
     ) : TypeObject()
 
     @Serializable
@@ -102,6 +106,26 @@ object WebView : Websocket<String>() {
     @SerialName("ping")
     class JsPingMessage : TypeObject()
 
+    // WebRTC signaling: the client offers a receive-only video connection, the server answers (see WebRtcStreamer)
+    @Serializable
+    @SerialName("rtcOffer")
+    class JsRtcOfferMessage(
+        val sdp: String,
+    ) : TypeObject()
+
+    @Serializable
+    @SerialName("rtcIce")
+    class JsRtcIceMessage(
+        val candidate: String,
+        val sdpMid: String? = null,
+        val sdpMLineIndex: Int = 0,
+    ) : TypeObject()
+
+    // the client gave up on the video stream (or left it): go back to jpeg frames
+    @Serializable
+    @SerialName("rtcStop")
+    class JsRtcStopMessage : TypeObject()
+
     // sent by the client when its tab gets hidden/shown, so nothing is rendered while nobody can see it
     @Serializable
     @SerialName("visibility")
@@ -122,12 +146,12 @@ object WebView : Websocket<String>() {
                 is LoadUrlMessage -> {
                     val url = event.url
                     dr.loadUrl(url)
-                    dr.resize(event.width, event.height)
+                    dr.resize(event.width, event.height, event.dpr)
                     logger.debug { "Loading URL $url" }
                 }
 
                 is ResizeMessage -> {
-                    dr.resize(event.width, event.height)
+                    dr.resize(event.width, event.height, event.dpr)
                 }
 
                 is JsEventMessage -> {
@@ -144,6 +168,18 @@ object WebView : Websocket<String>() {
 
                 is JsPingMessage -> {
                     notifyAllClients("{\"type\":\"pong\"}")
+                }
+
+                is JsRtcOfferMessage -> {
+                    dr.handleRtcOffer(event.sdp)
+                }
+
+                is JsRtcIceMessage -> {
+                    dr.handleRtcIce(event.candidate, event.sdpMid, event.sdpMLineIndex)
+                }
+
+                is JsRtcStopMessage -> {
+                    dr.stopRtc()
                 }
 
                 is JsVisibilityMessage -> {

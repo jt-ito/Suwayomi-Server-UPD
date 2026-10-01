@@ -57,6 +57,12 @@ dependencies {
     implementation(libs.hikaricp)
     implementation(libs.embeddedPostgres)
 
+    // WebView video streaming (WebRTC) - the native libraries are platform specific, bundle the supported ones
+    implementation(libs.webrtcJava)
+    listOf("windows-x86_64", "linux-x86_64", "linux-aarch64", "macos-x86_64", "macos-aarch64").forEach {
+        runtimeOnly("dev.onvoid.webrtc:webrtc-java:${libs.versions.webrtcJava.get()}:$it")
+    }
+
     // Exposed Migrations
     implementation(libs.exposed.migrations)
 
