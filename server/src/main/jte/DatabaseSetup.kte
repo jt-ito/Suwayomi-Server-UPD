@@ -838,6 +838,96 @@
             color: var(--text-muted);
         }
 
+        /* Confirmation dialog (replaces the browser's confirm()) */
+        .confirm-dialog {
+            margin: auto;
+            width: calc(100% - 32px);
+            max-width: 440px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: var(--surface-raised);
+            color: var(--text);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .confirm-dialog[open] {
+            animation: dialog-in 180ms var(--ease);
+        }
+
+        .confirm-dialog::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        .confirm-dialog[open]::backdrop {
+            animation: backdrop-in 180ms var(--ease);
+        }
+
+        .confirm-inner {
+            padding: 22px 22px 18px;
+        }
+
+        .confirm-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            margin-bottom: 8px;
+        }
+
+        .confirm-message {
+            font-size: 0.85rem;
+            line-height: 1.55;
+            color: var(--text-secondary);
+        }
+
+        .confirm-message .mono {
+            font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+        }
+
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .confirm-actions .btn:focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 480px) {
+            .confirm-actions {
+                flex-direction: column-reverse;
+            }
+            .confirm-actions .btn {
+                width: 100%;
+                padding: 12px 16px;
+            }
+        }
+
+        @keyframes dialog-in {
+            from { opacity: 0; transform: scale(0.96) translateY(6px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @keyframes backdrop-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .confirm-dialog[open], .confirm-dialog[open]::backdrop {
+                animation: none;
+            }
+        }
+
         /* Spinner */
         .spinner {
             width: 14px;
@@ -880,6 +970,8 @@
     </header>
 
     <main>
+        <!-- Everything that depends on the active engine; replaced after a switch (see refreshStatus) -->
+        <div id="liveStatus">
         <!-- Status Callout -->
         @if (stats.isPostgreSQL)
             <div class="status-callout active-postgres">
@@ -983,6 +1075,7 @@
                 </div>
             </div>
         @endif
+        </div>
 
         <!-- PostgreSQL Migration Panel -->
         <div class="panel">
@@ -1125,7 +1218,52 @@
         Suwayomi-Server &bull; Database Engine Management &bull; Open Source
     </footer>
 
+    <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+        <form method="dialog" class="confirm-inner">
+            <div class="confirm-title" id="confirmTitle"></div>
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-actions">
+                <button type="submit" class="btn btn-secondary" value="cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" value="ok" id="confirmOk" autofocus>Continue</button>
+            </div>
+        </form>
+    </dialog>
+
     <script>
+        // Themed replacement for confirm(): resolves true on the confirm button, false on cancel, Escape or a click outside.
+        // The message is text, except for "emphasis", which is shown in the monospace style (e.g. a manga count).
+        function confirmAction(options) {
+            return new Promise(function (resolve) {
+                var dialog = document.getElementById('confirmDialog');
+                document.getElementById('confirmTitle').textContent = options.title;
+                document.getElementById('confirmOk').textContent = options.confirmLabel || 'Continue';
+
+                var message = document.getElementById('confirmMessage');
+                message.textContent = '';
+                message.appendChild(document.createTextNode(options.message));
+                if (options.emphasis) {
+                    message.appendChild(document.createTextNode(' '));
+                    var em = document.createElement('span');
+                    em.className = 'mono';
+                    em.textContent = options.emphasis;
+                    message.appendChild(em);
+                }
+
+                var onBackdropClick = function (e) {
+                    // the dialog box itself is only hit outside of its content (the backdrop)
+                    if (e.target === dialog) dialog.close('cancel');
+                };
+                dialog.addEventListener('click', onBackdropClick);
+                dialog.addEventListener('close', function () {
+                    dialog.removeEventListener('click', onBackdropClick);
+                    resolve(dialog.returnValue === 'ok');
+                }, { once: true });
+
+                dialog.returnValue = '';
+                dialog.showModal();
+            });
+        }
+
         function getParams() {
             return {
                 host: document.getElementById('host').value.trim(),
@@ -1135,6 +1273,28 @@
                 password: document.getElementById('password').value,
                 useHikariPool: document.getElementById('useHikari').checked
             };
+        }
+
+        // Re-reads this page and swaps in the parts that depend on the active engine (status, counts, available
+        // switch panels), so the page reflects a completed switch without a manual reload. The migration log and
+        // the result message are outside of it and stay.
+        async function refreshStatus() {
+            for (var attempt = 0; attempt < 5; attempt++) {
+                try {
+                    var response = await fetch(window.location.pathname, { cache: 'no-store' });
+                    if (response.ok) {
+                        var doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        var fresh = doc.getElementById('liveStatus');
+                        if (fresh) {
+                            document.getElementById('liveStatus').innerHTML = fresh.innerHTML;
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    // the server may still be switching its connections over: try again shortly
+                }
+                await new Promise(function (resolve) { setTimeout(resolve, 1000); });
+            }
         }
 
         function showAlert(message, type) {
@@ -1189,11 +1349,15 @@
 
         async function handleStartMigration() {
             var totalManga = ${stats.mangaCount};
-            var confirmText = totalManga > 0
-                ? 'Initiate migration of ' + totalManga + ' manga and all related records to PostgreSQL? An automatic backup of H2 will be created prior to transfer.'
-                : 'Configure and activate PostgreSQL as the primary database?';
-
-            if (!confirm(confirmText)) {
+            var proceed = await confirmAction({
+                title: 'Migrate to PostgreSQL',
+                message: totalManga > 0
+                    ? 'All manga and related records will be transferred to PostgreSQL. An automatic backup of H2 is created before the transfer.'
+                    : 'PostgreSQL will be configured and activated as the primary database.',
+                emphasis: totalManga > 0 ? totalManga + ' manga' : '',
+                confirmLabel: 'Start migration'
+            });
+            if (!proceed) {
                 return;
             }
 
@@ -1251,6 +1415,7 @@
                     }
 
                     showAlert('<strong>Migration complete.</strong> Database transitioned to PostgreSQL successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                    await refreshStatus();
                 } else {
                     terminalProgressBar.style.background = 'var(--rose)';
                     terminalTitle.innerText = 'Migration failed';
@@ -1270,11 +1435,15 @@
 
         async function handleStartEmbeddedMigration() {
             var totalManga = ${stats.mangaCount};
-            var confirmText = totalManga > 0
-                ? 'Start the built-in PostgreSQL and migrate ' + totalManga + ' manga and all related records to it? An automatic backup of H2 will be created prior to transfer.'
-                : 'Start the built-in PostgreSQL and activate it as the primary database?';
-
-            if (!confirm(confirmText)) {
+            var proceed = await confirmAction({
+                title: 'Use built-in PostgreSQL',
+                message: totalManga > 0
+                    ? 'The built-in PostgreSQL will be started and all manga and related records migrated to it. An automatic backup of H2 is created before the transfer.'
+                    : 'The built-in PostgreSQL will be started and activated as the primary database.',
+                emphasis: totalManga > 0 ? totalManga + ' manga' : '',
+                confirmLabel: 'Start migration'
+            });
+            if (!proceed) {
                 return;
             }
 
@@ -1331,6 +1500,7 @@
                     }
 
                     showAlert('<strong>Migration complete.</strong> Database transitioned to the built-in PostgreSQL successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                    await refreshStatus();
                 } else {
                     terminalProgressBar.style.background = 'var(--rose)';
                     terminalTitle.innerText = 'Migration failed';
@@ -1348,7 +1518,12 @@
         }
 
         async function handleMigrateToH2() {
-            if (!confirm('Copy everything from PostgreSQL back into a fresh H2 file and activate it? PostgreSQL itself is left untouched, only read from.')) {
+            var proceed = await confirmAction({
+                title: 'Switch back to H2',
+                message: 'Everything is copied from PostgreSQL into a fresh H2 file, which is then activated. PostgreSQL itself is only read from and stays untouched.',
+                confirmLabel: 'Copy and switch'
+            });
+            if (!proceed) {
                 return;
             }
 
@@ -1404,6 +1579,7 @@
                     }
 
                     showAlert('<strong>Migration complete.</strong> Database transitioned to H2 successfully.<br/><a href="/" style="color:var(--emerald);font-weight:600;text-decoration:underline;margin-top:6px;display:inline-block;">Return to Manga Library &rarr;</a>', 'success');
+                    await refreshStatus();
                 } else {
                     terminalProgressBar.style.background = 'var(--rose)';
                     terminalTitle.innerText = 'Migration failed';
