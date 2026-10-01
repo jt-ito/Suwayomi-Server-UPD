@@ -21,9 +21,15 @@ class BackupQuery {
         val name: String,
     )
 
+    data class ValidateBackupExtension(
+        val pkgName: String,
+        val name: String,
+    )
+
     data class ValidateBackupResult(
         val missingSources: List<ValidateBackupSource>,
         val missingTrackers: List<ValidateBackupTracker>,
+        val missingExtensions: List<ValidateBackupExtension>,
     )
 
     @RequireAuth
@@ -32,6 +38,7 @@ class BackupQuery {
         return ValidateBackupResult(
             result.missingSourceIds.map { ValidateBackupSource(it.first, it.second) },
             result.missingTrackers.map { ValidateBackupTracker(it) },
+            result.missingExtensions.map { ValidateBackupExtension(it.pkgName, it.name) },
         )
     }
 

@@ -15,7 +15,9 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.manga.impl.backup.proto.models.Backup
+import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupExtension
 import suwayomi.tachidesk.manga.impl.track.tracker.TrackerManager
+import suwayomi.tachidesk.manga.model.table.ExtensionTable
 import suwayomi.tachidesk.manga.model.table.SourceTable
 import java.io.InputStream
 
@@ -26,6 +28,9 @@ object ProtoBackupValidator {
         val mangasMissingSources: List<String>,
         @JsonIgnore
         val missingSourceIds: List<Pair<Long, String>>,
+        // the extensions the backup lists as installed that are not installed here (a source is only listed for
+        // library manga, so this is the complete picture)
+        val missingExtensions: List<BackupExtension> = emptyList(),
     )
 
     fun validate(backup: Backup): ValidationResult {
@@ -49,6 +54,16 @@ object ProtoBackupValidator {
                 .map { it.name }
                 .sorted()
 
+        val installedExtensions =
+            transaction {
+                ExtensionTable
+                    .selectAll()
+                    .where { ExtensionTable.isInstalled eq true }
+                    .map { it[ExtensionTable.pkgName] }
+                    .toSet()
+            }
+        val missingExtensions = backup.backupExtensions.filter { it.pkgName.isNotBlank() && it.pkgName !in installedExtensions }
+
         return ValidationResult(
             missingSources
                 .map { "${it.value} (${it.key})" }
@@ -56,6 +71,7 @@ object ProtoBackupValidator {
             missingTrackers,
             emptyList(),
             missingSources.toList(),
+            missingExtensions,
         )
     }
 

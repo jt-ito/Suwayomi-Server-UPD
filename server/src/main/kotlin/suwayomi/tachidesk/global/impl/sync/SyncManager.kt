@@ -201,6 +201,7 @@ object SyncManager {
                     includeHistory = serverConfig.syncDataHistory.value,
                     includeClientData = false,
                     includeServerSettings = false,
+                    includeExtensions = false,
                 )
 
             _lastSyncState.value = SyncState.CreatingBackup(startInstant)

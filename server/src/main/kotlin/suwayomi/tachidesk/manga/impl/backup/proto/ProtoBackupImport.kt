@@ -32,6 +32,7 @@ import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupCategoryHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupGlobalMetaHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupMangaHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupSettingsHandler
+import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupExtensionHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupSourceHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.models.Backup
 import suwayomi.tachidesk.manga.impl.extension.Extension
@@ -248,9 +249,17 @@ object ProtoBackupImport : ProtoBackupBase() {
         flags: BackupFlags,
         syncMode: SyncRestoreMode,
     ): ValidationResult {
-        val validationResult = validate(backup)
+        // the stores come first: the extensions can only be installed from a store that is configured
+        if (flags.includeExtensions) {
+            BackupExtensionHandler.restore(
+                backup.extensionStores + backup.serverSettings?.extensionStores.orEmpty(),
+                backup.backupExtensions,
+            )
+        }
 
-        installMissingExtensions(validationResult.missingSourceIds)
+        // checked after the extensions are installed, so only sources that are really still missing are reported
+        installMissingExtensions(validate(backup).missingSourceIds)
+        val validationResult = validate(backup)
 
         val restoreCategories = if (flags.includeCategories) 1 else 0
         val restoreMeta = if (flags.includeClientData) 1 else 0

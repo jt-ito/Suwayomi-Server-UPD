@@ -92,6 +92,7 @@ class BackupMutation {
                         includeHistory = input?.includeHistory ?: BackupFlags.DEFAULT.includeHistory,
                         includeClientData = input?.includeClientData ?: BackupFlags.DEFAULT.includeClientData,
                         includeServerSettings = input?.includeServerSettings ?: BackupFlags.DEFAULT.includeServerSettings,
+                        includeExtensions = BackupFlags.DEFAULT.includeExtensions,
                     )
                 },
             )

@@ -23,6 +23,7 @@ class CategoryOrderRoundTripTest : ApplicationTest() {
             includeHistory = false,
             includeClientData = false,
             includeServerSettings = false,
+            includeExtensions = false,
         )
 
     @AfterEach

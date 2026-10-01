@@ -24,6 +24,7 @@ class BackupMangaHandlerSinceTest : ApplicationTest() {
             includeHistory = false,
             includeClientData = false,
             includeServerSettings = false,
+            includeExtensions = false,
         )
 
     @AfterEach

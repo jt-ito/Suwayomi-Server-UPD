@@ -934,8 +934,10 @@ class ServerConfig(
 
     // when databaseType is POSTGRESQL and this is true, the server manages its own bundled PostgreSQL instance
     // instead of connecting to the host/port/credentials above - no separate Postgres/Docker setup required
+    // protoNumbers 10000 and up are for what only this fork has: the official server uses the numbers below for
+    // different settings, so a backup moved between the two would otherwise set the wrong ones
     val useEmbeddedPostgres: MutableStateFlow<Boolean> by BooleanSetting(
-        protoNumber = 99,
+        protoNumber = 10002,
         group = SettingGroup.DATABASE,
         privacySafe = true,
         defaultValue = false,
@@ -1020,6 +1022,13 @@ class ServerConfig(
         group = SettingGroup.BACKUP,
         privacySafe = true,
         defaultValue = BackupFlags.DEFAULT.includeServerSettings,
+    )
+
+    val autoBackupIncludeExtensions: MutableStateFlow<Boolean> by BooleanSetting(
+        protoNumber = 10003,
+        group = SettingGroup.BACKUP,
+        privacySafe = true,
+        defaultValue = BackupFlags.DEFAULT.includeExtensions,
     )
 
     val opdsCbzMimetype: MutableStateFlow<CbzMediaType> by EnumSetting(
@@ -1135,7 +1144,7 @@ class ServerConfig(
     )
 
     val webViewAdBlockEnabled: MutableStateFlow<Boolean> by BooleanSetting(
-        protoNumber = 98,
+        protoNumber = 10001,
         group = SettingGroup.WEB_VIEW,
         privacySafe = true,
         defaultValue = true,

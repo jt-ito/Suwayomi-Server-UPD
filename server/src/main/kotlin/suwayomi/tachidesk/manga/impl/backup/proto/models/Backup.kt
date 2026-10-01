@@ -16,6 +16,10 @@ data class Backup(
     // suwayomi
     @ProtoNumber(9000) var meta: Map<String, String> = emptyMap(),
     @ProtoNumber(9001) var serverSettings: BackupServerSettings? = null,
+    // fork only. 9002 is taken by the official server (user settings), so a backup that is imported there does not
+    // see these as something else: its parser skips the numbers it does not know
+    @ProtoNumber(9100) var extensionStores: List<String> = emptyList(),
+    @ProtoNumber(9101) var backupExtensions: List<BackupExtension> = emptyList(),
 ) {
     fun getSourceMap(): Map<Long, String> =
         backupSources

@@ -25,6 +25,7 @@ class BackupFlagsRoundTripTest : ApplicationTest() {
             includeHistory = false,
             includeClientData = false,
             includeServerSettings = false,
+            includeExtensions = false,
         )
 
     @AfterEach

@@ -22,6 +22,7 @@ import okio.gzip
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.manga.impl.backup.BackupFlags
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupCategoryHandler
+import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupExtensionHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupGlobalMetaHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupMangaHandler
 import suwayomi.tachidesk.manga.impl.backup.proto.handlers.BackupSettingsHandler
@@ -157,6 +158,8 @@ object ProtoBackupExport : ProtoBackupBase() {
                     BackupSourceHandler.backup(backupMangas, flags),
                     BackupGlobalMetaHandler.backup(flags),
                     BackupSettingsHandler.backup(flags),
+                    extensionStores = if (flags.includeExtensions) BackupExtensionHandler.backupStores() else emptyList(),
+                    backupExtensions = if (flags.includeExtensions) BackupExtensionHandler.backup() else emptyList(),
                 )
             }
 

@@ -11,6 +11,7 @@ data class PartialBackupFlags(
     override val includeHistory: Boolean?,
     override val includeClientData: Boolean?,
     override val includeServerSettings: Boolean?,
+    override val includeExtensions: Boolean? = null,
 ) : IBackupFlags
 
 enum class BackupRestoreState {
