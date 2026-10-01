@@ -8,6 +8,8 @@ package suwayomi.tachidesk.server.database
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -23,6 +25,37 @@ import kotlin.io.path.createTempDirectory
  * connection or an actual running PostgreSQL instance of any version.
  */
 class EmbeddedPostgresManagerTest {
+    @Test
+    fun `generated passwords are long, random and use symbols`() {
+        val passwords = List(20) { EmbeddedPostgresManager.generatePassword() }
+        assertEquals(20, passwords.toSet().size)
+        passwords.forEach { assertEquals(96, it.length) }
+        // printable ASCII only, no whitespace; across 20 x 96 characters every class shows up
+        val all = passwords.joinToString("")
+        assertTrue(all.all { it in '!'..'~' })
+        assertTrue(all.any { it.isLetter() } && all.any { it.isDigit() } && all.any { !it.isLetterOrDigit() })
+        assertTrue(all.contains('\'') && all.contains('\\'))
+    }
+
+    @Test
+    fun `requirePasswordAuthentication replaces trust but keeps comments and other methods`() {
+        val hba =
+            """
+            # a trust comment stays
+            local   all             all                                     trust
+            host    all             all             127.0.0.1/32            trust  # note
+            host    all             all             ::1/128                 scram-sha-256
+            """.trimIndent()
+        val result = EmbeddedPostgresManager.requirePasswordAuthentication(hba)
+        assertTrue(result.contains("# a trust comment stays"))
+        assertTrue(result.contains("local   all             all                                     scram-sha-256"))
+        assertTrue(result.contains("127.0.0.1/32            scram-sha-256  # note"))
+        assertEquals(3, Regex("scram-sha-256").findAll(result).count())
+        assertNotEquals(hba, result)
+        // already protected: nothing to change
+        assertEquals(result, EmbeddedPostgresManager.requirePasswordAuthentication(result))
+    }
+
     @Test
     fun `majorVersionOf reads the PG_VERSION file`() {
         val dir = createTempDirectory().toFile()

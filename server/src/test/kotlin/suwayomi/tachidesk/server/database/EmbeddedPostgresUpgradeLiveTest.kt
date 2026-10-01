@@ -91,7 +91,7 @@ class EmbeddedPostgresUpgradeLiveTest {
                     "jdbc:postgresql://localhost:${oldInstance.port}/${EmbeddedPostgresManager.DATABASE_NAME}",
                     "org.postgresql.Driver",
                     EmbeddedPostgresManager.USERNAME,
-                    EmbeddedPostgresManager.PASSWORD,
+                    "postgres",
                     databaseConfig = DatabaseMigrationService.migrationDbConfig(schema),
                 )
             transaction(oldDb) { SchemaUtils.createSchema(schema) }
@@ -123,7 +123,7 @@ class EmbeddedPostgresUpgradeLiveTest {
                         "jdbc:postgresql://localhost:${upgradedInstance.port}/${EmbeddedPostgresManager.DATABASE_NAME}",
                         "org.postgresql.Driver",
                         EmbeddedPostgresManager.USERNAME,
-                        EmbeddedPostgresManager.PASSWORD,
+                        "postgres",
                         databaseConfig = DatabaseMigrationService.migrationDbConfig(schema),
                     )
                 val recovered =

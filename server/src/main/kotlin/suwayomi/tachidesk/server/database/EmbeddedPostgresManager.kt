@@ -28,6 +28,11 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
+import java.security.SecureRandom
+import java.sql.DriverManager
+import java.sql.SQLException
 import java.time.Duration
 import java.util.zip.ZipInputStream
 
@@ -43,8 +48,13 @@ object EmbeddedPostgresManager {
     private val logger = KotlinLogging.logger {}
 
     const val USERNAME = "postgres"
-    const val PASSWORD = "postgres"
     const val DATABASE_NAME = "postgres"
+
+    // within the 50-100 characters asked for; far beyond what could be guessed or brute forced
+    private const val PASSWORD_LENGTH = 96
+
+    @Volatile
+    private var cachedPassword: String? = null
 
     // The PostgreSQL major version bundled by the pinned `embeddedPostgres` Gradle dependency (see
     // gradle/libs.versions.toml). PostgreSQL's on-disk format is not compatible across major versions -
@@ -61,6 +71,90 @@ object EmbeddedPostgresManager {
         get() = instance != null
 
     private fun dataDirectory(): File = File("${Injekt.get<ApplicationDirs>().dataRoot}/postgres-data")
+
+    // next to the data directory, not inside it: the directory is swapped out by the major-version upgrade
+    private fun passwordFile(): File = File("${Injekt.get<ApplicationDirs>().dataRoot}/postgres-password")
+
+    /**
+     * A random password made of every printable ASCII character (letters, digits and all symbols, but no space, which
+     * is easy to lose when copying). PostgreSQL accepts any characters in a password; quotes are escaped where it is
+     * put into SQL, and it is always passed to the driver as a property, never put into a URL.
+     */
+    internal fun generatePassword(
+        length: Int = PASSWORD_LENGTH,
+        random: SecureRandom = SecureRandom(),
+    ): String {
+        val characters = ('!'..'~').toList()
+        return buildString(length) { repeat(length) { append(characters[random.nextInt(characters.size)]) } }
+    }
+
+    /** The instance's password: created on first use and kept in [passwordFile], readable by the current user only. */
+    @Synchronized
+    private fun password(): String {
+        cachedPassword?.let { return it }
+
+        val file = passwordFile()
+        val stored = file.takeIf { it.exists() }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+        val value =
+            stored ?: generatePassword().also {
+                file.delete()
+                val path = file.toPath()
+                try {
+                    Files.createFile(path, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
+                } catch (e: UnsupportedOperationException) {
+                    // Windows: no POSIX permissions, the file lives in the user's own profile folder
+                    Files.createFile(path)
+                }
+                Files.writeString(path, it)
+            }
+        cachedPassword = value
+        return value
+    }
+
+    /**
+     * The library initializes the instance with "trust" authentication, which accepts every connection from this
+     * machine and ignores the password entirely. Replaces that with password (SCRAM) authentication in a
+     * pg_hba.conf, leaving comments and everything else alone.
+     */
+    internal fun requirePasswordAuthentication(hba: String): String =
+        Regex("^(\\s*(?:local|host\\w*)\\s.*\\s)trust(\\s*(?:#.*)?)$", RegexOption.MULTILINE)
+            .replace(hba) { "${it.groupValues[1]}scram-sha-256${it.groupValues[2]}" }
+
+    /**
+     * Gives the running instance its random password and makes it required. Safe to run on every start: it does
+     * the same thing again, and it also upgrades data directories that were created while the password was a
+     * fixed, unchecked value. (Connections are only accepted from this machine in the short time between the
+     * library starting the instance with "trust" and this call.)
+     */
+    private fun secure(
+        pg: EmbeddedPostgres,
+        dataDir: File,
+    ) {
+        val password = password()
+        try {
+            DriverManager.getConnection("jdbc:postgresql://localhost:${pg.port}/$DATABASE_NAME", USERNAME, password).use { connection ->
+                connection.createStatement().use { statement ->
+                    statement.execute("ALTER ROLE $USERNAME PASSWORD '${password.replace("'", "''")}'")
+
+                    val hbaFile = File(dataDir, "pg_hba.conf")
+                    if (hbaFile.exists()) {
+                        val current = hbaFile.readText()
+                        val secured = requirePasswordAuthentication(current)
+                        if (secured != current) {
+                            hbaFile.writeText(secured)
+                            statement.execute("SELECT pg_reload_conf()")
+                        }
+                    }
+                }
+            }
+        } catch (e: SQLException) {
+            throw IOException(
+                "Could not secure the built-in PostgreSQL. If the password file ${passwordFile().absolutePath} was " +
+                    "deleted or changed, restore it - the data in ${dataDir.absolutePath} is untouched.",
+                e,
+            )
+        }
+    }
 
     /** Starts the embedded instance if it isn't already running, and returns how to connect to it. */
     @Synchronized
@@ -93,7 +187,17 @@ object EmbeddedPostgresManager {
                 // the library's own default (10s) can be too short for the very first start, where a real
                 // initdb has to run first - measured well over 30s on a slower disk/first run in practice
                 .setPGStartupWait(Duration.ofSeconds(90))
+                // the library checks that the server is ready by connecting to it, which needs the password once the
+                // data directory requires one (it is simply ignored while it does not yet)
+                .setConnectConfig("password", password())
                 .start()
+
+        try {
+            secure(pg, dataDir)
+        } catch (e: Exception) {
+            runCatching { pg.close() }
+            throw e
+        }
 
         instance = pg
         logger.info { "Embedded PostgreSQL started on port ${pg.port}" }
@@ -114,7 +218,7 @@ object EmbeddedPostgresManager {
             port = pg.port,
             databaseName = DATABASE_NAME,
             username = USERNAME,
-            password = PASSWORD,
+            password = password(),
         )
 
     /** Closes the instance's connection pool without deleting its data - it will resume from where it left off. */
@@ -166,6 +270,7 @@ object EmbeddedPostgresManager {
                     .setCleanDataDirectory(false)
                     .setPgBinaryResolver(OldMajorBinaryResolver(oldMajor))
                     .setPGStartupWait(Duration.ofSeconds(90))
+                    .setConnectConfig("password", password())
                     .start()
 
             newInstance =
@@ -178,8 +283,8 @@ object EmbeddedPostgresManager {
 
             val schema = Schema("suwayomi", USERNAME)
             val schemaConfig = DatabaseMigrationService.migrationDbConfig(schema)
-            val oldDb = Database.connect("jdbc:postgresql://localhost:${oldInstance.port}/$DATABASE_NAME", "org.postgresql.Driver", USERNAME, PASSWORD, databaseConfig = schemaConfig)
-            val newDb = Database.connect("jdbc:postgresql://localhost:${newInstance.port}/$DATABASE_NAME", "org.postgresql.Driver", USERNAME, PASSWORD, databaseConfig = schemaConfig)
+            val oldDb = Database.connect("jdbc:postgresql://localhost:${oldInstance.port}/$DATABASE_NAME", "org.postgresql.Driver", USERNAME, password(), databaseConfig = schemaConfig)
+            val newDb = Database.connect("jdbc:postgresql://localhost:${newInstance.port}/$DATABASE_NAME", "org.postgresql.Driver", USERNAME, password(), databaseConfig = schemaConfig)
 
             // Bring both up to the current app's expected schema before copying - the old cluster may predate
             // a schema change from an app update that shipped in the same release as this PostgreSQL major bump.

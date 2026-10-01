@@ -351,7 +351,8 @@ object DatabaseMigrationService {
             // This triggers DBManager to connect to PostgreSQL, create the 'suwayomi' schema, and run all migrations!
             serverConfig.databaseUrl.value = "postgresql://${params.host}:${params.port}/${params.databaseName}"
             serverConfig.databaseUsername.value = params.username
-            serverConfig.databasePassword.value = params.password
+            // the built-in instance's password is managed (and kept) by EmbeddedPostgresManager, not in the settings file
+            serverConfig.databasePassword.value = if (rawParams.useEmbedded) "" else params.password
             serverConfig.useHikariConnectionPool.value = params.useHikariPool
             serverConfig.useEmbeddedPostgres.value = rawParams.useEmbedded
             serverConfig.databaseType.value = DatabaseType.POSTGRESQL
