@@ -156,7 +156,7 @@ Running behind a reverse proxy (any domain works): pass WebSocket upgrades throu
 ./gradlew :server:run             # run on :4567 (restart after Kotlin or .kte changes)
 ```
 
-The server is Kotlin on JDK 21 with Javalin, GraphQL (graphql-kotlin), Exposed, JTE templates for the server-rendered pages (`/setup`, `/database`, the WebView page, `login.html`), and a bundled web interface from [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI). See [CONTRIBUTING.md](CONTRIBUTING.md). Settings reference and wiki pages are in [docs/](docs/).
+The server is Kotlin on JDK 21 with Javalin, GraphQL (graphql-kotlin), Exposed, JTE templates for the server-rendered pages (`/setup`, `/database`, the WebView page, `login.html`), and a bundled web interface from [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI). See [CONTRIBUTING.md](CONTRIBUTING.md). Settings reference pages are in [docs/](docs/).
 
 ## Credit and license
 
