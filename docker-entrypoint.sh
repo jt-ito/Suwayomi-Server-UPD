@@ -18,6 +18,41 @@ if [ "$(id -u)" = 0 ]; then
     exec setpriv --reuid="$PUID" --regid="$PGID" --init-groups "$0" "$@"
 fi
 
+# DATABASE picks the engine from the very first start, so nothing has to be migrated later:
+#   h2        the embedded H2 file database (the default)
+#   postgres  the PostgreSQL that is built into the server (kept in /data/postgres-data)
+#   external  your own PostgreSQL: also set DATABASE_URL, DATABASE_USERNAME and DATABASE_PASSWORD
+# It only fills in DATABASE_TYPE and USE_EMBEDDED_POSTGRES when they are not set explicitly.
+case "$(printf '%s' "${DATABASE:-}" | tr 'A-Z' 'a-z')" in
+    "") ;;
+    h2)
+        : "${DATABASE_TYPE:=H2}"
+        export DATABASE_TYPE
+        ;;
+    postgres | embedded | builtin)
+        : "${DATABASE_TYPE:=POSTGRESQL}"
+        : "${USE_EMBEDDED_POSTGRES:=true}"
+        export DATABASE_TYPE USE_EMBEDDED_POSTGRES
+        if [ -f /data/database.mv.db ] && [ ! -d /data/postgres-data ]; then
+            echo "WARNING: /data already holds an H2 library (database.mv.db) but DATABASE=postgres starts an empty PostgreSQL." >&2
+            echo "WARNING: To keep that library, start with DATABASE=h2 and use the migration page (/database) to move it." >&2
+        fi
+        ;;
+    external)
+        : "${DATABASE_TYPE:=POSTGRESQL}"
+        : "${USE_EMBEDDED_POSTGRES:=false}"
+        export DATABASE_TYPE USE_EMBEDDED_POSTGRES
+        ;;
+    *)
+        echo "ERROR: DATABASE must be h2, postgres or external (got \"$DATABASE\")." >&2
+        exit 1
+        ;;
+esac
+if [ "$(printf '%s' "${DATABASE_TYPE:-}" | tr 'a-z' 'A-Z')" = "H2" ] && [ -d /data/postgres-data ] && [ ! -f /data/database.mv.db ]; then
+    echo "WARNING: /data holds a PostgreSQL library (postgres-data) but the H2 database is selected, which starts empty." >&2
+    echo "WARNING: To keep that library, use DATABASE=postgres, or move it with the migration page (/database)." >&2
+fi
+
 # The WebUI that was built into the image replaces the copy in the data volume on every start, so an image update
 # also updates the interface (the volume would otherwise keep serving an old one).
 rm -rf /data/webUI

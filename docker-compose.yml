@@ -40,9 +40,10 @@ services:
       # flavor is legacy.
       # - WEB_UI_FLAVOR=CUSTOM
 
-      # Use the built-in PostgreSQL instead of H2 (see the README):
-      # - DATABASE_TYPE=POSTGRESQL
-      # - USE_EMBEDDED_POSTGRES=true
+      # The database, chosen from the very first start so nothing has to be migrated later:
+      #   h2 (the default), postgres (the PostgreSQL built into the image, kept in /data/postgres-data)
+      #   or external (your own PostgreSQL: also set DATABASE_URL, DATABASE_USERNAME and DATABASE_PASSWORD).
+      # - DATABASE=postgres
 
 volumes:
   tsundoku-data:

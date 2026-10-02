@@ -111,6 +111,7 @@ The default is the embedded **H2** file database, as in Suwayomi. tsundoku can a
 - **Automatic major-version upgrades.** When a new server release bundles a newer PostgreSQL, the old data is upgraded in a staging copy and a backup is kept. If anything fails, the original data is left untouched.
 - **Migration page.** Open `/database` (also linked from Settings > Server > Database). It shows which engine is active and walks you through switching **from H2 to PostgreSQL and back**, with a confirmation dialog and an automatic backup first.
 - **External PostgreSQL** works as before: set `DATABASE_TYPE=POSTGRESQL` and the `DATABASE_*` variables.
+- **Choosing the engine in Docker.** `DATABASE=h2` (the default), `DATABASE=postgres` (the built-in PostgreSQL) or `DATABASE=external` picks the engine from the first start, so a new install never has to be migrated. It only fills in `DATABASE_TYPE` and `USE_EMBEDDED_POSTGRES` when you have not set them. Changing it later does not move data: if the volume already holds a library in the other engine the container prints a warning (the new engine would start empty), and the migration page moves the data.
 
 PostgreSQL is a good choice for larger libraries. H2 is simpler and fine for a personal library.
 
@@ -139,7 +140,7 @@ Mihon-compatible backups, plus:
 
 Settings live in `server.conf` in the data folder and in Settings > Server. `-D` overrides (`-Dsuwayomi.tachidesk.config.server.<setting>=...`) still work. For containers, these environment variables set the matching setting and **win over `server.conf`** (empty values are ignored; lists and maps use JSON-style syntax):
 
-`BIND_IP`, `BIND_PORT`, `SOCKS_PROXY_ENABLED/VERSION/HOST/PORT/USERNAME/PASSWORD`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY`, `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE`, `WEB_UI_ENABLED/FLAVOR/CHANNEL/UPDATE_INTERVAL`, `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL`, `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA/CATEGORIES/CHAPTERS/TRACKING/HISTORY/CLIENT_DATA/SERVER_SETTINGS`, `FLARESOLVERR_ENABLED/URL/TIMEOUT/SESSION_NAME/SESSION_TTL/RESPONSE_AS_FALLBACK`, `DATABASE_TYPE/URL/USERNAME/PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL`, `KCEF_ENABLED`. `TZ` is read by the JVM.
+`BIND_IP`, `BIND_PORT`, `SOCKS_PROXY_ENABLED/VERSION/HOST/PORT/USERNAME/PASSWORD`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY`, `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE`, `WEB_UI_ENABLED/FLAVOR/CHANNEL/UPDATE_INTERVAL`, `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL`, `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA/CATEGORIES/CHAPTERS/TRACKING/HISTORY/CLIENT_DATA/SERVER_SETTINGS`, `FLARESOLVERR_ENABLED/URL/TIMEOUT/SESSION_NAME/SESSION_TTL/RESPONSE_AS_FALLBACK`, `DATABASE` (Docker only: `h2`, `postgres` or `external`), `DATABASE_TYPE/URL/USERNAME/PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL`, `KCEF_ENABLED`. `TZ` is read by the JVM.
 
 ```yaml
 environment:
