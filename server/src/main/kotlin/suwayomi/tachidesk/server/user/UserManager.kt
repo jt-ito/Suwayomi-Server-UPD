@@ -61,7 +61,10 @@ object UserManager {
                         .where { UserTable.username eq trimmed }
                         .firstOrNull()
 
-                if (row != null) {
+                if (row != null && row[UserTable.passwordHash].isEmpty()) {
+                    // unclaimed first-run account, see SetupManager
+                    null
+                } else if (row != null) {
                     val salt = row[UserTable.salt]
                     val hash = row[UserTable.passwordHash]
                     if (PasswordHasher.verifyPassword(password, salt, hash)) {

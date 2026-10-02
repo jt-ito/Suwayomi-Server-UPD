@@ -1,0 +1,461 @@
+@param nonce: String
+@param error: String
+@param username: String
+@param needsCode: Boolean
+@param version: String
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex" />
+    <title>Set up — tsundoku</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style nonce="${nonce}">
+        /* Same tokens as DatabaseSetup.kte, so the server-rendered pages look alike. */
+        :root {
+            --bg: #09090b;
+            --surface: #121215;
+            --surface-raised: #18181b;
+            --surface-hover: #222226;
+            --border: #27272a;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focus: #52525b;
+            --text: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --emerald: #10b981;
+            --rose: #f43f5e;
+            --rose-bg: rgba(244, 63, 94, 0.08);
+            --rose-border: rgba(244, 63, 94, 0.22);
+            --ease: cubic-bezier(0.23, 1, 0.32, 1);
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 16px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+            animation: rise 320ms var(--ease) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 22px;
+        }
+
+        .brand-mark {
+            width: 20px;
+            height: 20px;
+            color: var(--text);
+        }
+
+        .version-pill {
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--surface-raised);
+            border: 1px solid var(--border-subtle);
+            padding: 2px 7px;
+            border-radius: var(--radius-sm);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .lede {
+            margin-top: 6px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .alert {
+            margin-top: 20px;
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--rose-border);
+            background: var(--rose-bg);
+            color: var(--text);
+            font-size: 0.85rem;
+        }
+
+        .alert:empty {
+            display: none;
+        }
+
+        form {
+            margin-top: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .control {
+            position: relative;
+            display: flex;
+        }
+
+        .control input {
+            width: 100%;
+            min-height: 44px;
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 9px 12px;
+            color: var(--text);
+            font-family: 'Geist Mono', ui-monospace, monospace;
+            /* 16px keeps iOS from zooming the page when a field is focused */
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+        }
+
+        .control input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .control input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 1px var(--border-focus);
+        }
+
+        .control input[aria-invalid="true"] {
+            border-color: var(--rose-border);
+            box-shadow: 0 0 0 1px var(--rose-border);
+        }
+
+        .control.has-action input {
+            padding-right: 48px;
+        }
+
+        #code {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 44px;
+            height: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 140ms var(--ease), transform 140ms var(--ease);
+        }
+
+        .toggle:hover {
+            color: var(--text);
+        }
+
+        .toggle:active {
+            transform: scale(0.94);
+        }
+
+        .toggle:focus-visible,
+        .btn:focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 2px;
+        }
+
+        .toggle .eye-off,
+        .toggle[aria-pressed="true"] .eye {
+            display: none;
+        }
+
+        .toggle[aria-pressed="true"] .eye-off {
+            display: block;
+        }
+
+        .hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            transition: color 140ms var(--ease);
+        }
+
+        .hint.ok {
+            color: var(--emerald);
+        }
+
+        .hint.bad {
+            color: var(--rose);
+        }
+
+        .btn {
+            margin-top: 4px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid #f4f4f5;
+            background: #f4f4f5;
+            color: #09090b;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            cursor: pointer;
+            transition: background-color 140ms var(--ease), border-color 140ms var(--ease), transform 140ms var(--ease), opacity 140ms var(--ease);
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #e4e4e7;
+            border-color: #e4e4e7;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .foot {
+            margin-top: 18px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            main {
+                align-items: flex-start;
+                padding-top: 24px;
+            }
+
+            .card {
+                padding: 22px 18px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .card {
+                animation: none;
+            }
+
+            * {
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <div class="brand">
+                <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                </svg>
+                <span>tsundoku</span>
+                <span class="version-pill">${version}</span>
+            </div>
+
+            <h1>Create your admin account</h1>
+            <p class="lede">This is the first run. The account you create here manages the server and can add other users later.</p>
+
+            <div class="alert" id="alert" role="alert" aria-live="polite">${error}</div>
+
+            <form method="POST" id="setup-form" novalidate>
+                <div class="field">
+                    <label for="user">Username</label>
+                    <div class="control">
+                        <input type="text" name="user" id="user" value="${username}" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9._\-]{3,32}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="admin" />
+                    </div>
+                    <p class="hint">3-32 characters: letters, numbers, dots, dashes, underscores.</p>
+                </div>
+
+                <div class="field">
+                    <label for="pass">Password</label>
+                    <div class="control has-action">
+                        <input type="password" name="pass" id="pass" required minlength="8" maxlength="128" autocomplete="new-password" />
+                        <button type="button" class="toggle" id="toggle" aria-label="Show passwords" aria-pressed="false">
+                            <svg class="eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg class="eye-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
+                    </div>
+                    <p class="hint" id="pass-hint">At least 8 characters.</p>
+                </div>
+
+                <div class="field">
+                    <label for="pass2">Confirm password</label>
+                    <div class="control">
+                        <input type="password" name="pass2" id="pass2" required maxlength="128" autocomplete="new-password" />
+                    </div>
+                    <p class="hint" id="pass2-hint"></p>
+                </div>
+
+                @if(needsCode)
+                <div class="field">
+                    <label for="code">Setup code</label>
+                    <div class="control">
+                        <input type="text" name="code" id="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" />
+                    </div>
+                    <p class="hint">Printed in the server log when it started. You are not on the server itself, so it is needed to prove you own it.</p>
+                </div>
+                @endif
+
+                <button type="submit" class="btn" id="submit">Create account</button>
+            </form>
+
+            <p class="foot">You will sign in with it on the next screen.</p>
+        </div>
+    </main>
+    <script nonce="${nonce}">
+        (function () {
+            var form = document.getElementById('setup-form');
+            var user = document.getElementById('user');
+            var pass = document.getElementById('pass');
+            var pass2 = document.getElementById('pass2');
+            var passHint = document.getElementById('pass-hint');
+            var pass2Hint = document.getElementById('pass2-hint');
+            var alertEl = document.getElementById('alert');
+            var submit = document.getElementById('submit');
+            var toggle = document.getElementById('toggle');
+            var userRegex = /^[a-zA-Z0-9._-]{3,32}$/;
+
+            function setHint(el, text, state) {
+                el.textContent = text;
+                el.className = 'hint' + (state ? ' ' + state : '');
+            }
+
+            function checkPass() {
+                if (!pass.value) {
+                    setHint(passHint, 'At least 8 characters.', '');
+                } else if (pass.value.length < 8) {
+                    setHint(passHint, (8 - pass.value.length) + ' more character' + (8 - pass.value.length === 1 ? '' : 's') + ' needed.', '');
+                } else {
+                    setHint(passHint, 'Long enough.', 'ok');
+                }
+            }
+
+            function checkMatch() {
+                if (!pass2.value) {
+                    setHint(pass2Hint, '', '');
+                } else if (pass2.value === pass.value) {
+                    setHint(pass2Hint, 'Passwords match.', 'ok');
+                } else {
+                    setHint(pass2Hint, 'Passwords do not match.', 'bad');
+                }
+            }
+
+            pass.addEventListener('input', function () {
+                checkPass();
+                checkMatch();
+            });
+            pass2.addEventListener('input', checkMatch);
+
+            toggle.addEventListener('click', function () {
+                var show = toggle.getAttribute('aria-pressed') !== 'true';
+                toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+                toggle.setAttribute('aria-label', show ? 'Hide passwords' : 'Show passwords');
+                pass.type = show ? 'text' : 'password';
+                pass2.type = show ? 'text' : 'password';
+            });
+
+            function fail(field, message) {
+                alertEl.textContent = message;
+                field.setAttribute('aria-invalid', 'true');
+                field.focus();
+            }
+
+            form.addEventListener('submit', function (e) {
+                [user, pass, pass2].forEach(function (f) { f.removeAttribute('aria-invalid'); });
+                if (!userRegex.test(user.value.trim())) {
+                    e.preventDefault();
+                    fail(user, 'Username must be 3-32 characters: letters, numbers, dots, dashes or underscores.');
+                } else if (pass.value.length < 8) {
+                    e.preventDefault();
+                    fail(pass, 'Password must be at least 8 characters.');
+                } else if (pass.value !== pass2.value) {
+                    e.preventDefault();
+                    fail(pass2, 'The passwords do not match.');
+                } else {
+                    submit.disabled = true;
+                    submit.textContent = 'Creating account…';
+                }
+            });
+
+            // after a server-side error the button must work again when the page is restored from the back/forward cache
+            window.addEventListener('pageshow', function () {
+                submit.disabled = false;
+                submit.textContent = 'Create account';
+            });
+
+            (alertEl.textContent.trim() ? pass : user).focus();
+        })();
+    </script>
+</body>
+</html>

@@ -147,7 +147,7 @@
 </head>
 <body>
     <header>
-        <h1>Suwayomi</h1>
+        <h1>tsundoku</h1>
     </header>
     <main>
         <div class="error">${error}</div>
@@ -165,7 +165,7 @@
         </form>
     </main>
     <footer>
-        <p>Suwayomi: ${MR.strings.label_version.localized(locale, BuildConfig.VERSION)}</p>
+        <p>tsundoku: ${MR.strings.label_version.localized(locale, BuildConfig.VERSION)}</p>
     </footer>
     <script>
         document.querySelector('form').addEventListener('submit', function(e) {
@@ -216,6 +216,10 @@
                     document.cookie = 'suwayomi-server-token=' + token + '; path=/; max-age=2592000; SameSite=Lax';
                     var params = new URLSearchParams(window.location.search);
                     var redirect = params.get('redirect') || './';
+                    // only same-site paths (not javascript: URLs, //host or backslash tricks)
+                    if (redirect.charAt(0) !== '/' || redirect.charAt(1) === '/' || redirect.charAt(1) === '\\') {
+                        redirect = './';
+                    }
                     window.location.href = redirect;
                 } else {
                     throw new Error('Invalid username or password');

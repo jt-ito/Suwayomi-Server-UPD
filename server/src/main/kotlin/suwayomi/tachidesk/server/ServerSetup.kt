@@ -47,6 +47,7 @@ import suwayomi.tachidesk.server.database.DatabaseMigrationService
 import suwayomi.tachidesk.server.database.databaseUp
 import suwayomi.tachidesk.server.generated.BuildConfig
 import suwayomi.tachidesk.server.settings.SettingsRegistry
+import suwayomi.tachidesk.server.user.SetupManager
 import suwayomi.tachidesk.server.util.AppMutex.handleAppMutex
 import suwayomi.tachidesk.server.util.CEFManager
 import suwayomi.tachidesk.server.util.ConfigTypeRegistration
@@ -194,7 +195,7 @@ fun applicationSetup() {
 
     setupLogLevelUpdating(serverConfig.debugLogsEnabled, listOf(BASE_LOGGER_NAME))
 
-    logger.info { "Running Suwayomi-Server ${BuildConfig.VERSION}" }
+    logger.info { "Running tsundoku ${BuildConfig.VERSION}" }
 
     logger.debug {
         "Loaded config:\n" +
@@ -336,6 +337,8 @@ fun applicationSetup() {
             databaseUp()
         }
     }
+
+    SetupManager.init()
 
     try {
         LocalSource.register()

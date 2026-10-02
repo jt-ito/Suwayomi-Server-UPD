@@ -10,7 +10,6 @@ package suwayomi.tachidesk.server.database.migration
 import de.neonew.exposed.migrations.helpers.SQLMigration
 import suwayomi.tachidesk.graphql.types.DatabaseType
 import suwayomi.tachidesk.server.serverConfig
-import suwayomi.tachidesk.server.user.PasswordHasher
 
 @Suppress("ClassName", "unused")
 class M0066_MultiUser : SQLMigration() {
@@ -22,10 +21,6 @@ class M0066_MultiUser : SQLMigration() {
     }
 
     private fun h2Query(): String {
-        val adminUsername = serverConfig.authUsername.value.ifBlank { "admin" }
-        val adminRawPass = serverConfig.authPassword.value.ifBlank { "admin" }
-        val adminSalt = PasswordHasher.generateSalt()
-        val adminHash = PasswordHasher.hashPassword(adminRawPass, adminSalt)
         val now = System.currentTimeMillis()
 
         return """
@@ -67,9 +62,10 @@ class M0066_MultiUser : SQLMigration() {
             ALTER TABLE category ADD COLUMN IF NOT EXISTS user_id INT NULL REFERENCES user_account(id) ON DELETE CASCADE;
             ALTER TABLE trackrecord ADD COLUMN IF NOT EXISTS user_id INT NULL REFERENCES user_account(id) ON DELETE CASCADE;
 
-            -- Seed User #1 (Admin) if no user exists
+            -- Seed User #1 (Admin) if no user exists. The empty password hash means "not claimed yet": nobody can log in
+            -- until SetupManager sets the credentials (configured at startup or entered on /setup).
             INSERT INTO user_account (id, username, password_hash, salt, user_role, created_at, last_login_at)
-            SELECT 1, '$adminUsername', '$adminHash', '$adminSalt', 'ADMIN', $now, 0
+            SELECT 1, 'admin', '', '', 'ADMIN', $now, 0
             WHERE NOT EXISTS (SELECT 1 FROM user_account WHERE id = 1);
 
             -- Migrate existing manga in_library to user #1
@@ -92,10 +88,6 @@ class M0066_MultiUser : SQLMigration() {
     }
 
     private fun postgresQuery(): String {
-        val adminUsername = serverConfig.authUsername.value.ifBlank { "admin" }
-        val adminRawPass = serverConfig.authPassword.value.ifBlank { "admin" }
-        val adminSalt = PasswordHasher.generateSalt()
-        val adminHash = PasswordHasher.hashPassword(adminRawPass, adminSalt)
         val now = System.currentTimeMillis()
 
         return """
@@ -137,9 +129,10 @@ class M0066_MultiUser : SQLMigration() {
             ALTER TABLE category ADD COLUMN IF NOT EXISTS user_id INT NULL REFERENCES user_account(id) ON DELETE CASCADE;
             ALTER TABLE trackrecord ADD COLUMN IF NOT EXISTS user_id INT NULL REFERENCES user_account(id) ON DELETE CASCADE;
 
-            -- Seed User #1 (Admin) if no user exists
+            -- Seed User #1 (Admin) if no user exists. The empty password hash means "not claimed yet": nobody can log in
+            -- until SetupManager sets the credentials (configured at startup or entered on /setup).
             INSERT INTO user_account (id, username, password_hash, salt, user_role, created_at, last_login_at)
-            SELECT 1, '$adminUsername', '$adminHash', '$adminSalt', 'ADMIN', $now, 0
+            SELECT 1, 'admin', '', '', 'ADMIN', $now, 0
             WHERE NOT EXISTS (SELECT 1 FROM user_account WHERE id = 1);
 
             -- Reset sequence for user_account. Wrapped in a DO block (not a bare SELECT) because the migration

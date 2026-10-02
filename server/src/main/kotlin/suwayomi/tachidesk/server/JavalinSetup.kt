@@ -41,6 +41,7 @@ import suwayomi.tachidesk.opds.OpdsAPI
 import suwayomi.tachidesk.server.database.DatabaseMigrationService
 import suwayomi.tachidesk.server.generated.BuildConfig
 import suwayomi.tachidesk.server.user.ForbiddenException
+import suwayomi.tachidesk.server.user.SetupManager
 import suwayomi.tachidesk.server.user.UnauthorizedException
 import suwayomi.tachidesk.server.user.UserType
 import suwayomi.tachidesk.server.user.getUserFromContext
@@ -53,6 +54,8 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.URI
 import java.net.URLEncoder
+import java.security.SecureRandom
+import java.util.Base64
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
@@ -203,7 +206,9 @@ object JavalinSetup {
             val password = ctx.formParam("pass")
             val user = username?.let { u -> password?.let { p -> suwayomi.tachidesk.server.user.UserManager.authenticate(u, p) } }
             val isConfigValid =
-                username == serverConfig.authUsername.value &&
+                !username.isNullOrEmpty() &&
+                    !password.isNullOrEmpty() &&
+                    username == serverConfig.authUsername.value &&
                     password == serverConfig.authPassword.value
             val isValid = user != null || isConfigValid
 
@@ -243,6 +248,79 @@ object JavalinSetup {
                     "error" to "Invalid username or password",
                 ),
             )
+        }
+
+        val setupPath = ServerSubpath.maybeAddAsPrefix("/setup")
+        val rootPath = ServerSubpath.maybeAddAsPrefix("/")
+
+        fun renderSetup(
+            ctx: Context,
+            error: String,
+            username: String = "",
+        ) {
+            ctx.header("content-type", "text/html")
+            // inline script/style only with this page's nonce, so injected markup could not run even if it got through
+            val nonce = ByteArray(16).also { SecureRandom().nextBytes(it) }.let { Base64.getEncoder().encodeToString(it) }
+            ctx.header(
+                "Content-Security-Policy",
+                "default-src 'none'; script-src 'nonce-$nonce'; style-src 'nonce-$nonce' https://fonts.googleapis.com; " +
+                    "font-src https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+            )
+            ctx.header("X-Frame-Options", "DENY")
+            ctx.header("X-Content-Type-Options", "nosniff")
+            ctx.header("Referrer-Policy", "no-referrer")
+            ctx.header("Cache-Control", "no-store")
+            ctx.render(
+                "Setup.jte",
+                mapOf(
+                    "nonce" to nonce,
+                    "error" to error,
+                    "username" to username,
+                    "needsCode" to SetupManager.codeRequired(ctx),
+                    "version" to BuildConfig.VERSION,
+                ),
+            )
+        }
+
+        get(setupPath) { ctx ->
+            if (!SetupManager.isUnclaimed()) {
+                ctx.header("Location", rootPath)
+                throw RedirectResponse(HttpStatus.SEE_OTHER)
+            }
+            renderSetup(ctx, "")
+        }
+
+        post(setupPath) { ctx ->
+            if (!SetupManager.isUnclaimed()) {
+                ctx.header("Location", rootPath)
+                throw RedirectResponse(HttpStatus.SEE_OTHER)
+            }
+            val password = ctx.formParam("pass").orEmpty()
+            val error =
+                when {
+                    SetupManager.codeRequired(ctx) && !SetupManager.codeMatches(ctx.formParam("code")) -> {
+                        "Wrong setup code"
+                    }
+
+                    password != ctx.formParam("pass2") -> {
+                        "The passwords do not match"
+                    }
+
+                    else -> {
+                        try {
+                            SetupManager.claim(ctx.formParam("user").orEmpty(), password)
+                            null
+                        } catch (e: IllegalArgumentException) {
+                            e.message ?: "Invalid username or password"
+                        }
+                    }
+                }
+            if (error != null) {
+                renderSetup(ctx, error, ctx.formParam("user").orEmpty())
+                return@post
+            }
+            ctx.header("Location", rootPath)
+            throw RedirectResponse(HttpStatus.SEE_OTHER)
         }
 
         val databasePath = ServerSubpath.maybeAddAsPrefix("/database")
@@ -285,6 +363,13 @@ object JavalinSetup {
             }
 
             val authMode = serverConfig.authMode.value
+
+            if (authMode != AuthMode.NONE && !isApi && !ctx.path().startsWith(setupPath) &&
+                !ctx.path().startsWith(databasePath) && SetupManager.isUnclaimed()
+            ) {
+                ctx.header("Location", setupPath)
+                throw RedirectResponse(HttpStatus.SEE_OTHER)
+            }
 
             val basicUser =
                 ctx.basicAuthCredentials()?.let { (user, pass) ->

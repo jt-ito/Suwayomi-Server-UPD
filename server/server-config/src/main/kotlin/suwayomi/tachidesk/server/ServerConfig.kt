@@ -610,7 +610,7 @@ class ServerConfig(
         protoNumber = 56,
         group = SettingGroup.AUTH,
         privacySafe = true,
-        defaultValue = AuthMode.NONE,
+        defaultValue = AuthMode.UI_LOGIN,
         enumClass = AuthMode::class,
         typeInfo = SettingsRegistry.PartialTypeInfo(imports = listOf("suwayomi.tachidesk.graphql.types.AuthMode")),
         excludeFromBackup = true,
@@ -886,7 +886,7 @@ class ServerConfig(
         protoNumber = 67,
         group = SettingGroup.AUTH,
         privacySafe = true,
-        defaultValue = 60.days,
+        defaultValue = 180.days,
         min = 0.seconds,
     )
 
@@ -1039,7 +1039,7 @@ class ServerConfig(
         enumClass = CbzMediaType::class,
         typeInfo = SettingsRegistry.PartialTypeInfo(imports = listOf("suwayomi.tachidesk.graphql.types.CbzMediaType")),
         excludeFromBackup = true,
-        description = "Controls the MimeType that Suwayomi sends in OPDS entries for CBZ archives. Also affects global CBZ download. Modern follows recent IANA standard (2017), while LEGACY (deprecated mimetype for .cbz) and COMPATIBLE (deprecated mimetype for all comic archives) might be more compatible with older clients.",
+        description = "Controls the MimeType that tsundoku sends in OPDS entries for CBZ archives. Also affects global CBZ download. Modern follows recent IANA standard (2017), while LEGACY (deprecated mimetype for .cbz) and COMPATIBLE (deprecated mimetype for all comic archives) might be more compatible with older clients.",
     )
 
     val serveConversions: MutableStateFlow<Map<String, DownloadConversion>> by createDownloadConversionsMap(
