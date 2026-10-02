@@ -1,239 +1,166 @@
+# tsundoku
 
-| Build                                                                                         | Stable                                                                                                                                                                   | Preview                                                                                                                                                                                                                                           | Support Server |
-|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| ![CI](https://github.com/Suwayomi/Suwayomi-Server/actions/workflows/build_push.yml/badge.svg) | [![stable release](https://img.shields.io/github/release/Suwayomi/Suwayomi-Server.svg?maxAge=3600&label=download)](https://github.com/Suwayomi/Suwayomi-Server/releases) | [![preview](https://img.shields.io/badge/dynamic/json?url=https://github.com/Suwayomi/Suwayomi-Server-preview/raw/main/index.json&label=download&query=$.latest&color=blue)](https://github.com/Suwayomi/Suwayomi-Server-preview/releases/latest) | [![Discord](https://img.shields.io/discord/801021177333940224.svg?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/DDZdqZWaHA) |
+A self-hosted manga reader server that runs [Mihon (Tachiyomi)](https://mihon.app/) extensions, with accounts, a first-run setup flow, a built-in PostgreSQL option and a faster in-app WebView.
 
-## Table of Contents
-- [What is Suwayomi?](#what-is-suwayomi)
-  - [Features](#features)
-- [Suwayomi client projects](#suwayomi-client-projects)
-  - [Integrated clients](#integrated-clients)
-  - [Other clients](#other-clients-potentially-inactive-or-abandoned)
-- [Downloading and Running the app](#downloading-and-running-the-app)
-  - [Using Operating System Specific Bundles](#using-operating-system-specific-bundles)
-    - [Windows](#windows)
-    - [macOS](#macos)
-    - [GNU/Linux](#gnulinux)
-  - [Other methods of getting Suwayomi](#other-methods-of-getting-suwayomi)
-    - [Docker](#docker)
-    - [Arch Linux](#arch-linux)
-    - [Debian/Ubuntu](#debianubuntu)
-    - [NixOS](#nixos)
-  - [Advanced Methods](#advanced-methods)
-    - [Running the jar release directly](#running-the-jar-release-directly)
-    - [Using Suwayomi Remotely](#using-suwayomi-remotely)
-  - [Syncing With Mihon (Tachiyomi) and Neko](#syncing-with-mihon-tachiyomi-and-neko)
-    - [The Suwayomi extension and tracker](#the-suwayomi-extension-and-tracker)
-    - [The Suwayomi merge source in Neko](#the-suwayomi-merge-source-in-neko)
-    - [Other methods](#other-methods)
-  - [Troubleshooting and Support](#troubleshooting-and-support)
-  - [Contributing and Technical info](#contributing-and-technical-info)
-  - [Translation](#translation)
-  - [Credit](#credit)
-  - [License](#license)
-  - [Disclaimer](#disclaimer)
-<!-- Generated with https://ecotrust-canada.github.io/markdown-toc/ -->
+**tsundoku is a fork of [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server).** It keeps Suwayomi's extension support, library, downloads, backups, trackers and APIs, and adds the features below. The web interface lives in [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI), a fork of [Suwayomi-WebUI](https://github.com/Suwayomi/Suwayomi-WebUI).
 
-# What is Suwayomi?
-<img src="https://github.com/Suwayomi/Suwayomi-Server/raw/master/server/src/main/resources/icon/faviconlogo.png" alt="drawing" width="200"/>
-
-A free and open source manga reader server that runs extensions built for [Mihon (Tachiyomi)](https://mihon.app/).
-
-Suwayomi is an independent Mihon (Tachiyomi) compatible software and is **not a Fork of** Mihon (Tachiyomi).
-
-Suwayomi-Server is as multi-platform as you can get. Any platform that runs java and/or has a modern browser can run it. This includes Windows, Linux, macOS, chrome OS, etc. Follow [Downloading and Running the app](#downloading-and-running-the-app) for installation instructions.
-
-You can use Mihon (Tachiyomi) to access your Suwayomi-Server. For more info look [here](#syncing-with-mihon-tachiyomi-and-neko).
-
-## Features
 > [!NOTE]
->
-> These are capabilities of Suwayomi-Server, the actual working support is provided by each front-end app, checkout their respective readme for more info.
+> This is an independent fork maintained by one person. It is not affiliated with the Suwayomi project, and Suwayomi's own support channels do not cover it. Please report problems here.
 
-- Installing and executing Mihon (Tachiyomi)'s Extensions, So you'll get the same sources
-- Searching and browsing installed sources
-- A library to save your mangas and categories to put them into
-- Automated library updates to check for new chapters
-- Automated download of new chapters
-- Viewing latest updated chapters
-- Ability to download Manga for offline read
-- Backup and restore support powered by Mihon (Tachiyomi)-compatible Backups
-- Automated backup creations
-- Tracking via [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [MangaUpdates](https://www.mangaupdates.com/), etc.
-- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) support to bypass Cloudflare protection
-- Automated WebUI updates (supports the default WebUI and VUI)
-- OPDS and OPDS-PSE support (endpoint: `/api/opds/v1.2`)
+## Table of contents
+- [What is different from Suwayomi](#what-is-different-from-suwayomi)
+- [Getting started](#getting-started)
+- [First run and logging in](#first-run-and-logging-in)
+- [Security](#security)
+- [Database: H2, built-in PostgreSQL and the migration page](#database-h2-built-in-postgresql-and-the-migration-page)
+- [WebView](#webview)
+- [Backups](#backups)
+- [Configuration and Docker environment variables](#configuration-and-docker-environment-variables)
+- [Moving over from Suwayomi](#moving-over-from-suwayomi)
+- [Development](#development)
+- [Credit and license](#credit-and-license)
 
-# Suwayomi Client Projects
-**You need a client/user interface app as a front-end for Suwayomi-Server, if you [Directly Download Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server/releases/latest) you'll get a bundled version of [Suwayomi-WebUI](https://github.com/Suwayomi/Suwayomi-WebUI) with it.**
+## What is different from Suwayomi
 
-Here's a list of known clients/user interfaces for Suwayomi-Server (checkout the respective GitHub repository for their features):
+| Area | Suwayomi | tsundoku |
+| --- | --- | --- |
+| Authentication | Off by default, one shared login | **On by default** (`ui_login`), real accounts, first-run setup page |
+| Users | Single user | **Multiple accounts** (admin and member), each with their own library, categories, reading progress and trackers |
+| Database | H2, or an external PostgreSQL you run yourself | H2 or a **built-in PostgreSQL** that the server starts, upgrades and protects for you |
+| Switching databases | Manual | **Guided migration page** (`/database`) with an automatic backup, both directions |
+| WebView | Pictures of a server-side Chromium over a websocket | **WebRTC video** with automatic fallback, ad blocking, phone friendly |
+| Backups | Mihon-compatible | Also keeps **extensions and repositories**, installs missing extensions on restore, stays readable by the official server |
+| Sessions | 60 day refresh token | 180 day refresh token, silently refreshed, so a phone stays logged in |
+| Updates | Suwayomi releases | Checks **this fork's** releases |
 
-##### Integrated clients
+### Accounts
+- Admins and members, created and managed from the WebUI (profile card in the sidebar).
+- Library entries, categories, read progress and tracker bindings are per account. Existing single-user data moves to the first admin automatically.
+- A user's role and existence are read from the database on every token check and refresh, so demoting or deleting an account takes effect immediately rather than when the token expires.
 
-These clients are built-in options, and the server can keep them automatically up-to-date.
+## Getting started
 
-- [Suwayomi-WebUI](https://github.com/Suwayomi/Suwayomi-WebUI): Web app, PWA
-- [Suwayomi-VUI](https://github.com/Suwayomi/Suwayomi-VUI): Web app, PWA
+There are no packaged releases yet. Build it from source, which needs JDK 21:
 
-##### Other clients (potentially inactive or abandoned)
-- [Tachidesk-VaadinUI](https://github.com/Suwayomi/Tachidesk-VaadinUI): Desktop app (windows, linux, mac); UI in the browser, manages its own suwayomi server instance
-- [Moku](https://github.com/Youwes09/Moku): Desktop app (windows, linux, mac), can manage its own suwayomi server instance
-- [Tachidesk-JUI](https://github.com/Suwayomi/Tachidesk-JUI): Desktop app (windows, linux, mac); can manage its own suwayomi server instance
-- [Tachidesk-Sorayomi](https://github.com/Suwayomi/Tachidesk-Sorayomi): Web app; Desktop app (windows, linux, mac); Android app; requires access to a running server
-- [Tachidesk-qtui](https://github.com/Suwayomi/Tachidesk-qtui): Android app; iOS app Desktop app (linux); requires access to a running server
-- [Suwayomi Client for KOReader](https://github.com/LK4D4/suwayomi.koplugin): KOReader plugin; works anywhere KOReader can run (Android, Kindle, Kobo, etc.); requires access to a running server
+```bash
+./gradlew :server:run          # run from source, serves on http://localhost:4567
+./gradlew :server:shadowJar    # or build a runnable jar (server/build)
+```
 
-# Downloading and Running the app
-## Using Operating System Specific Bundles
-To facilitate the use of Suwayomi we provide bundle releases that include The Java Runtime Environment, ElectronJS and the Suwayomi-Launcher.
+Open `http://localhost:4567`. Releases will appear on the [releases page](https://github.com/jt-ito/tsundoku/releases) once there are any; the server checks that page for updates and treats "no release yet" as "up to date".
 
-If a bundle for your operating system or cpu architecture is not provided then refer to [Advanced Methods](#advanced-methods)
-
-### Windows
-Download the latest `win64`(Windows 64-bit) release from [the releases section](https://github.com/Suwayomi/Suwayomi-Server/releases) or a preview one from [the preview repository](https://github.com/Suwayomi/Suwayomi-Server-preview/releases).
-
-Unzip the downloaded file and double-click on one of the launcher scripts.
-
-### macOS
-Download the latest `macOS-x64`(older macOS systems) or `macOS-arm64`(Apple M1 and newer) release from [the releases section](https://github.com/Suwayomi/Suwayomi-Server/releases) or a preview one from [the preview repository](https://github.com/Suwayomi/Suwayomi-Server-preview/releases).
-
-Unzip the downloaded file and double-click on one of the launcher scripts.
-
-### GNU/Linux
-Download the latest `linux-x64`(x86_64) release from [the releases section](https://github.com/Suwayomi/Suwayomi-Server/releases) or a preview one from [the preview repository](https://github.com/Suwayomi/Suwayomi-Server-preview/releases).
-
-`tar xvf` the downloaded file and double-click on one of the launcher scripts or run them using the terminal.
-
-#### WebView support (GNU/Linux)
-
-WebView support is implemented via [JCEF](https://github.com/JetBrains/jcef).
-This is optional, and is only necessary to support some extensions.
-
-To have a functional WebView, some X11 dependencies are required for rendering Chromium.
-These include `libxrender`, `libxcomposite` `libxdamage`, `libxkbcommon` and `libxtst`.
-
-A CEF server is launched on startup, which loads the X11 libraries.
-If those are missing, you should see "Could not load 'jcef' library".
-If so, use `ldd ~/.local/share/Tachidesk/bin/kcef/libjcef.so | grep not` to figure out which libraries are not found on your system.
-
-Refer to the [Dockerfile](https://github.com/Suwayomi/Suwayomi-Server-docker/blob/main/Dockerfile) for more details.
-
-Note that it is required to have an X session active and available to Suwayomi (i.e. `DISPLAY` is set).
-It is not enough to have `WAYLAND_DISPLAY`, if your environment does not provide xwayland (or if you run Suwayomi as a service), you need to use a tool like [`Xvfb`](https://en.wikipedia.org/wiki/Xvfb).
-The Dockerfile linked above also does this.
-
-## Other methods of getting Suwayomi
 ### Docker
-Check our Official Docker release [Suwayomi Container](https://github.com/orgs/Suwayomi/packages/container/package/tachidesk) for running Suwayomi Server in a docker container. Source code for our container is available at [docker-tachidesk](https://github.com/Suwayomi/docker-tachidesk), an example compose file can also be found there. By default, the server will be running on http://localhost:4567 open this url in your browser.
 
-### Arch Linux
-You can install Suwayomi from the AUR:
-```
-yay -S suwayomi-server-bin
+```bash
+docker run -d --name tsundoku -p 4567:4567 -v tsundoku-data:/data jteaito/tsundoku:latest
 ```
 
-### Debian/Ubuntu
-Download the latest deb package from the release section.
+or use [docker-compose.yml](docker-compose.yml). Everything lives in the `/data` volume. The image runs as an unprivileged user (uid 1000), bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) (refreshed on every start), and is configured with the environment variables [below](#configuration-and-docker-environment-variables). To build it yourself:
 
-> [!CAUTION]
-> These options are outdated and unmaintained ([relevant issue](https://github.com/Suwayomi/Suwayomi-Server/issues/1318))
-> ### MPR
-> ```
-> git clone https://mpr.makedeb.org/tachidesk-server.git
-> cd tachidesk-server
-> makedeb -si
-> ```
-> ### Ubuntu
-> ```
-> sudo add-apt-repository ppa:suwayomi/tachidesk-server
-> sudo apt update
-> sudo apt install tachidesk-server
-> ```
-
-### NixOS
-You can deploy Suwayomi on NixOS using the module `services.suwayomi-server` in your configuration:
-
-```
-{
-  services.suwayomi-server = {
-    enable = true;
-  };
-}
+```bash
+docker build -t tsundoku .    # needs the .git folder; the WebUI comes from the fork-customizations branch of tsundoku-WebUI
 ```
 
-For more information, see [the NixOS manual](https://nixos.org/manual/nixos/stable/#module-services-suwayomi-server).
+Use `--build-arg WEBUI_REPO=...` and `--build-arg WEBUI_REF=...` to build another WebUI. The image is published to Docker Hub ([`jteaito/tsundoku`](https://hub.docker.com/r/jteaito/tsundoku)) and the GitHub Container Registry (`ghcr.io/jt-ito/tsundoku`) by `.github/workflows/docker_publish.yml` (a `v*` tag gives `:latest` and the version, a push to `master` gives `:edge`). The WebView needs the Chromium libraries the image installs; if it does not start on your host, set `KCEF_ENABLED=false`.
 
-You can also directly use the package from [nixpkgs](https://search.nixos.org/packages?channel=unstable&type=packages&query=suwayomi-server).
+### Data folder
 
-## Advanced Methods
-### Running the jar release directly
-In order to run the app you need the following:
-- The jar release of Suwayomi-Server
-- The Java Runtime Environment(JRE) 21 or newer
-- A Browser like Google Chrome, Firefox, Edge, etc.
-- ElectronJS (optional)
+Data lives in the same folder as Suwayomi's (`%LOCALAPPDATA%\Tachidesk` on Windows, `~/.local/share/Tachidesk` on Linux, `~/Library/Application Support/Tachidesk` on macOS), so an existing library is picked up.
 
-Download the latest `.jar` release from [the releases section](https://github.com/Suwayomi/Suwayomi-Server/releases) or a preview jar build from [the preview repository](https://github.com/Suwayomi/Suwayomi-Server-preview/releases).
+## First run and logging in
 
-Make sure you have The Java Runtime Environment installed on your system, Double-click on the jar file or run `java -jar Suwayomi-Server-vX.Y.Z-rxxxx.jar` from a Terminal/Command Prompt window to run the app which will open a new browser window automatically.
+Authentication is on by default, so there has to be a way to create the first admin without shipping a default password. There isn't one:
 
-### Using Suwayomi Remotely
-You can run Suwayomi on your computer or a server and connect to it remotely through one of our clients or the bundled web interface with a web browser. This method of using Suwayomi is requiring a bit of networking/firewall/port forwarding/server configuration/etc. knowledge on your side, if you can run a Minecraft server and configure it, then you are good to go.
+- A fresh install has **no usable account**. The first visit redirects to `/setup`, where you choose the admin username and password (8 characters or more).
+- Opened **from the machine the server runs on**, the setup page asks for nothing else.
+- Opened from **anywhere else** (another device, a domain, a reverse proxy, Docker), it asks for a one-time **setup code** that the server prints to its log on startup. This stops a stranger who finds the port first from claiming the server.
+- To skip the page entirely, set `AUTH_USERNAME` and `AUTH_PASSWORD` (see [below](#configuration-and-docker-environment-variables)). The admin account is created from them at startup, once.
+- To run **without** authentication, set `AUTH_MODE=none` (or `server.authMode = "none"`). The server logs a warning on every start while auth is off, because anyone who can reach it then has full admin access. If you turn authentication on later, `/setup` opens.
 
-Check out [this wiki page](https://github.com/Suwayomi/Suwayomi-Server/wiki/Configuring-Tachidesk-Server) for a guide on configuring Suwayomi-Server. 
+Existing installs keep whatever `authMode` their `server.conf` already says.
 
-If you face issues with your setup then we are happy to provide help, just join our discord server(a discord badge is on the top of the page, you are just a click-clack away!).
+## Security
 
-## Syncing With Mihon (Tachiyomi) and Neko
-### The Suwayomi extension and tracker
-- You can install and configure the `Suwayomi` [extension](https://github.com/Suwayomi/tachiyomi-extension) inside Mihon (Tachiyomi) and forks.
-- The extension will load your Suwayomi library.
-- By manipulating extension search filters you can browse your categories.
-- You can enable the Suwayomi tracker to track reading progress with your Suwayomi server.
-  - Note: to sync from
-    - Mihon (Tachiyomi) to Suwayomi: Mihon (Tachiyomi) automatically updates the chapters read status when it's updating the tracker (e.g. while reading)
-    - Suwayomi to Mihon (Tachiyomi): To sync Mihon (Tachiyomi) with Suwayomi, you have to open the manga's track information, then, Mihon (Tachiyomi) will automatically update its chapter list with the state from Suwayomi
+What was changed beyond turning authentication on by default. This is hardening work by the fork's maintainer plus a security review of the changes; it has not had an independent audit.
 
-### The Suwayomi merge source in Neko
-- You can enable the `Suwayomi` source in the Merge Source settings
-- You can merge titles in Neko with titles from your Suwayomi library.
-- You can enable 2-way automatic sync to track reading progress with your Suwayomi server.
-  - Note: only applies to merged titles
-    - Neko automatically updates the chapters read status in Suwayomi
-    - During updates, Neko will automatically update its chapter list with the read state from Suwayomi
-    - This only pulls if the status is read, to prevent marking read chapters as unread in Neko
+- **No default credentials.** The first account is created by the owner through `/setup` or from configuration. The migration creates the account row with an empty password hash that cannot log in.
+- **Setup page protections.** The setup code is compared in constant time. The code is skipped only for a request that provably comes from the machine's own browser: loopback peer, loopback `Host`, no proxy headers and a same-origin fetch. That blocks a cross-site form post or DNS rebinding from creating the admin. Any other request, including your own domain, only has to enter the code, so no domain is ever refused.
+- **Output and script safety.** Values are escaped by the template engine, the setup page ships a Content-Security-Policy with a per-response nonce, `X-Frame-Options: DENY`, `nosniff` and no-referrer, and the old login page no longer follows `javascript:` or `//host` redirects.
+- **Tokens.** Roles and account existence come from the database, not the token. Access tokens last 5 minutes and are refreshed by the WebUI; the refresh token lasts 180 days. Both lifetimes are configurable.
+- **Built-in PostgreSQL** is protected by a randomly generated password (see below).
+- **Tests** run against an isolated data folder and never touch your real configuration.
 
-### Other methods
-Checkout [this issue](https://github.com/Suwayomi/Suwayomi-Server/issues/159) for tracking progress.
+Known limits: CORS reflects the caller's origin, which is needed so a WebUI served from another domain can reach the API, and which only matters while `authMode` is `none`. Refresh tokens are not revoked when a password changes; deleting the account does revoke them. If you expose the server to the internet, keep authentication on and put it behind HTTPS.
 
-## Troubleshooting and Support
-See [this troubleshooting wiki page](https://github.com/Suwayomi/Suwayomi-Server/wiki/Troubleshooting).
+## Database: H2, built-in PostgreSQL and the migration page
 
-## Contributing and Technical info
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+The default is the embedded **H2** file database, as in Suwayomi. tsundoku can also run its own **PostgreSQL**, with no separate install:
 
-## Translation
-Feel free to translate the project on [Weblate](https://hosted.weblate.org/projects/suwayomi/suwayomi-server/)
+- **Built-in PostgreSQL.** The PostgreSQL binaries ship inside the server, so there is nothing extra to install. It starts PostgreSQL on a free local port, keeps its data in the data folder, protects it with a random password (stored next to the data, not in `server.conf`) and stops it with the server.
+- **Automatic major-version upgrades.** When a new server release bundles a newer PostgreSQL, the old data is upgraded in a staging copy and a backup is kept. If anything fails, the original data is left untouched.
+- **Migration page.** Open `/database` (also linked from Settings > Server > Database). It shows which engine is active and walks you through switching **from H2 to PostgreSQL and back**, with a confirmation dialog and an automatic backup first.
+- **External PostgreSQL** works as before: set `DATABASE_TYPE=POSTGRESQL` and the `DATABASE_*` variables.
 
-<details><summary>Translation Progress</summary>
-<a href="https://hosted.weblate.org/engage/suwayomi-server/">
-<img src="https://hosted.weblate.org/widgets/suwayomi/-/suwayomi-server/multi-auto.svg" alt="Translation status" />
-</a>
-</details>
+PostgreSQL is a good choice for larger libraries. H2 is simpler and fine for a personal library.
 
-## Credit
-This project is a spiritual successor of [TachiWeb-Server](https://github.com/Tachiweb/TachiWeb-server), Many of the ideas and the groundwork adopted in this project comes from TachiWeb.
+## WebView
 
-The `AndroidCompat` module was originally developed by [@null-dev](https://github.com/null-dev) for [TachiWeb-Server](https://github.com/Tachiweb/TachiWeb-server) and is licensed under `Apache License Version 2.0` and `Copyright 2019 Andy Bao and contributors`.
+The WebView opens a page in a Chromium that runs on the server (via KCEF), for sources that need a real browser to pass a challenge. In tsundoku it:
 
-Parts of [Mihon (Tachiyomi)](https://github.com/mihonapp/mihon) is adopted into this codebase, also licensed under `Apache License Version 2.0` and `Copyright 2015 Javier Tomás`.
+- streams the page as **WebRTC video** instead of JPEG pictures, with the old JPEG stream as an automatic fallback;
+- uses **less CPU** while idle;
+- blocks known ad and tracker domains (switchable in settings);
+- works on **phones**, and is themed with the app;
+- exposes `GET /api/v1/webview/user-agent` and `POST /api/v1/webview/cookies` so a native client can use the same user agent and import cookies.
 
-You can obtain a copy of `Apache License Version 2.0` from  http://www.apache.org/licenses/LICENSE-2.0
+Clients on other networks may need STUN/TURN servers: set `TSUNDOKU_WEBRTC_ICE_SERVERS` to a comma-separated list of URLs. KCEF is not supported on macOS.
 
-Changes to both codebases is licensed under `MPL v. 2.0` as the rest of this project.
+## Backups
 
-## License
+Mihon-compatible backups, plus:
+
+- an option to include **extensions and repositories**;
+- **missing extensions are installed automatically** while restoring;
+- backups stay **readable by the official Suwayomi server**;
+- the WebUI keeps you logged in after a restore and applies the restored theme without a reload.
+
+## Configuration and Docker environment variables
+
+Settings live in `server.conf` in the data folder and in Settings > Server. `-D` overrides (`-Dsuwayomi.tachidesk.config.server.<setting>=...`) still work. For containers, these environment variables set the matching setting and **win over `server.conf`** (empty values are ignored; lists and maps use JSON-style syntax):
+
+`BIND_IP`, `BIND_PORT`, `SOCKS_PROXY_ENABLED/VERSION/HOST/PORT/USERNAME/PASSWORD`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY`, `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE`, `WEB_UI_ENABLED/FLAVOR/CHANNEL/UPDATE_INTERVAL`, `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL`, `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA/CATEGORIES/CHAPTERS/TRACKING/HISTORY/CLIENT_DATA/SERVER_SETTINGS`, `FLARESOLVERR_ENABLED/URL/TIMEOUT/SESSION_NAME/SESSION_TTL/RESPONSE_AS_FALLBACK`, `DATABASE_TYPE/URL/USERNAME/PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL`, `KCEF_ENABLED`. `TZ` is read by the JVM.
+
+```yaml
+environment:
+  - AUTH_USERNAME=owner      # optional: skips the /setup page
+  - AUTH_PASSWORD=change-me-please
+  # - AUTH_MODE=none         # only if you really want no login
+```
+
+Differences from the old Docker defaults: `AUTH_MODE` defaults to `ui_login`, `JWT_REFRESH_EXPIRY` to `180d`, and the Docker image sets `WEB_UI_FLAVOR=CUSTOM` so it serves its bundled tsundoku-WebUI. Full reference: [docs/Configuring-Suwayomi‐Server.md](docs/Configuring-Suwayomi‐Server.md).
+
+Running behind a reverse proxy (any domain works): pass WebSocket upgrades through, send `X-Forwarded-For`/`X-Forwarded-Proto`, terminate HTTPS at the proxy, and keep its access logs private, since the WebUI loads some images with the token in the URL.
+
+## Moving over from Suwayomi
+
+- Point tsundoku at your existing data folder, or restore a Suwayomi backup. Suwayomi's own backups can be restored here and tsundoku's can be restored there.
+- Existing single-user data becomes the first admin's. Set `AUTH_USERNAME` and `AUTH_PASSWORD` (or use `/setup`) before you expose the server.
+- The extension and tracker ecosystem is the same, so the same sources and tracking services work.
+
+## Development
+
+```bash
+./gradlew :server:compileKotlin   # compile
+./gradlew :server:test            # tests; they use an isolated data folder
+./gradlew :server:ktlintCheck     # style
+./gradlew :server:run             # run on :4567 (restart after Kotlin or .kte changes)
+```
+
+The server is Kotlin on JDK 21 with Javalin, GraphQL (graphql-kotlin), Exposed, JTE templates for the server-rendered pages (`/setup`, `/database`, the WebView page, `login.html`), and a bundled web interface from [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI). See [CONTRIBUTING.md](CONTRIBUTING.md). Settings reference and wiki pages are in [docs/](docs/).
+
+## Credit and license
+
+tsundoku exists because of the [Suwayomi](https://github.com/Suwayomi) project and its contributors, whose server this is forked from. Suwayomi in turn is a spiritual successor of [TachiWeb-Server](https://github.com/Tachiweb/TachiWeb-server). The `AndroidCompat` module was originally developed by [@null-dev](https://github.com/null-dev) for TachiWeb-Server and parts of [Mihon (Tachiyomi)](https://github.com/mihonapp/mihon) are adopted into this codebase; both are licensed under the [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0) (`Copyright 2015 Javier Tomás` for Mihon). Changes to both are licensed under MPL 2.0 like the rest of the project.
 
     Copyright (C) Contributors to the Suwayomi project
 

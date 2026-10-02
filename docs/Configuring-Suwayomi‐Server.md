@@ -134,13 +134,15 @@ server.updateMangas = false
 
 ### Authentication
 ```
-server.authMode = "none" # none, basic_auth, simple_login or ui_login
+server.authMode = "ui_login" # none, basic_auth, simple_login or ui_login (default: ui_login)
 server.authUsername = "user"
 server.authPassword = "pass"
 server.jwtAudience = "suwayomi-server-api"
 server.jwtTokenExpiry = "5m"
-server.jwtRefreshExpiry = "60d"
+server.jwtRefreshExpiry = "180d"
 ```
+- Environment variables (for Docker and compose files) set the matching `server.*` setting and win over `server.conf`; `-D` overrides win over them. Empty values are ignored, and lists and maps (`EXTENSION_STORES`, `DOWNLOAD_CONVERSIONS`) use JSON-style syntax. Supported: `BIND_IP`, `BIND_PORT`, `SOCKS_PROXY_ENABLED/VERSION/HOST/PORT/USERNAME/PASSWORD`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY`, `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE`, `WEB_UI_ENABLED/FLAVOR/CHANNEL/UPDATE_INTERVAL`, `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL`, `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA/CATEGORIES/CHAPTERS/TRACKING/HISTORY/CLIENT_DATA/SERVER_SETTINGS`, `FLARESOLVERR_ENABLED/URL/TIMEOUT/SESSION_NAME/SESSION_TTL/RESPONSE_AS_FALLBACK`, `DATABASE_TYPE/URL/USERNAME/PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL`, `KCEF_ENABLED` (`TZ` is read by the JVM itself). To run without authentication set `AUTH_MODE=none` (compose: `environment: - AUTH_MODE=none`; `docker run -e AUTH_MODE=none ...`); the `/setup` page then never appears, and turning authentication on later opens it. Unlike the old Docker defaults, `AUTH_MODE` defaults to `ui_login` and `JWT_REFRESH_EXPIRY` to `180d`.
+- First run: with authentication on, the first visit redirects to `/setup`, where you create the admin account. Opened from the same machine it needs nothing else; from any other address (Docker, a NAS, another device) it asks for the setup code that the server prints to its log on startup (`Setup code: ...`). To skip the page, set `server.authUsername` and `server.authPassword` (for Docker e.g. `-Dsuwayomi.tachidesk.config.server.authUsername=...` in `JAVA_TOOL_OPTIONS`): the admin account is created from them on startup, once, and later changes to these settings do not change the account. Passwords need at least 8 characters here.
 - `server.authMode = "none"`: Since v2.1.1867, Suwayomi supports two modes of authentication. Enabling authentication is useful when hosting on a public network/the Internet. If you used the original `server.basicAuth*` variables, it will be automatically migrated.  
   - `basic_auth` configures Suwayomi for [Basic access authentication](https://en.wikipedia.org/wiki/Basic_access_authentication).  
   - `simple_login` works similarly to Basic Authentication, but presents a custom login page. The login is stored via a cookie and needs to be refreshed on every server restart or every 30 minutes.  
