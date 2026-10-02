@@ -40,14 +40,25 @@ A self-hosted manga reader server that runs [Mihon (Tachiyomi)](https://mihon.ap
 
 ## Getting started
 
-There are no packaged releases yet. Build it from source, which needs JDK 21:
+Download an archive from the [releases page](https://github.com/jt-ito/tsundoku/releases), unpack it and start the launcher:
+
+| Platform | Archive | Start |
+| --- | --- | --- |
+| Windows (x64) | `tsundoku-<version>-windows-x64.zip` | `tsundoku.bat` |
+| macOS (Apple silicon) | `tsundoku-<version>-macOS-arm64.tar.gz` | `tsundoku.command` |
+| macOS (Intel) | `tsundoku-<version>-macOS-x64.tar.gz` | `tsundoku.command` |
+| Linux (x64) | `tsundoku-<version>-linux-x64.tar.gz` | `tsundoku.sh` |
+
+Each archive brings its own Java runtime and the tsundoku interface, so nothing else needs installing. The archives are not signed: Windows SmartScreen and macOS Gatekeeper ask for confirmation the first time. There is also a plain `tsundoku-<version>.jar` (needs JDK 21), and a [Docker image](#docker). Then open `http://localhost:4567`. Installers (.msi, AppImage, .deb) are not offered yet.
+
+The server checks the releases page for updates and treats "no release yet" as "up to date".
+
+To build from source you need JDK 21:
 
 ```bash
 ./gradlew :server:run          # run from source, serves on http://localhost:4567
 ./gradlew :server:shadowJar    # or build a runnable jar (server/build)
 ```
-
-Open `http://localhost:4567`. Releases will appear on the [releases page](https://github.com/jt-ito/tsundoku/releases) once there are any; the server checks that page for updates and treats "no release yet" as "up to date".
 
 ### Docker
 
