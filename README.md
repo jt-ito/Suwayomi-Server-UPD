@@ -181,14 +181,54 @@ For containers, environment variables set the matching setting and **win over `s
 | Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
 | WebView | `KCEF_ENABLED` |
 
-A typical setup:
+A complete setup with a login, FlareSolverr and the built-in PostgreSQL (`docker-compose.yml`):
 
 ```yaml
-environment:
-  - AUTH_USERNAME=owner            # optional: skips the /setup page
-  - AUTH_PASSWORD=change-me-please
-  # - AUTH_MODE=none               # only if you really want no login
+services:
+  tsundoku:
+    image: jteaito/tsundoku:latest
+    container_name: tsundoku
+    restart: unless-stopped
+    ports:
+      - "4567:4567"
+    volumes:
+      - tsundoku-data:/data                      # database, settings, extensions, backups, logs
+      - tsundoku-downloads:/data/downloads       # or a host folder, for example /mnt/manga:/data/downloads
+    environment:
+      - TZ=Etc/UTC
+      - PUID=1000                                # the user and group the server runs as
+      - PGID=1000
+
+      # Login: the admin account is created from these on first start, so there is no /setup page.
+      - AUTH_MODE=ui_login                       # none | basic_auth | simple_login | ui_login
+      - AUTH_USERNAME=owner
+      - AUTH_PASSWORD=change-me-please           # at least 8 characters
+
+      # Database: the PostgreSQL that is built into the image, used from the very first start.
+      # DATABASE=postgres is the short form of these two lines.
+      - DATABASE_TYPE=POSTGRESQL
+      - USE_EMBEDDED_POSTGRES=true
+
+      # FlareSolverr, the service below
+      - FLARESOLVERR_ENABLED=true
+      - FLARESOLVERR_URL=http://flaresolverr:8191
+    depends_on:
+      - flaresolverr
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - TZ=Etc/UTC
+      - LOG_LEVEL=info
+
+volumes:
+  tsundoku-data:
+  tsundoku-downloads:
 ```
+
+Without `AUTH_USERNAME` and `AUTH_PASSWORD` the server shows the `/setup` page instead. `AUTH_MODE=none` turns the login off, which is only sensible on a network you trust.
 
 **Differences from Suwayomi's Docker image**
 - `AUTH_MODE` defaults to `ui_login`.
