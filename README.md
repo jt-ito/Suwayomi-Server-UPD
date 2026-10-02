@@ -69,7 +69,7 @@ docker run -d --name tsundoku -p 4567:4567 -v tsundoku-data:/data jteaito/tsundo
 or use [docker-compose.yml](docker-compose.yml). Everything lives in the `/data` volume. The image runs as an unprivileged user (uid 1000 by default; set `PUID` and `PGID` to change it), bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) (refreshed on every start), and is configured with the environment variables [below](#configuration-and-docker-environment-variables). To build it yourself:
 
 ```bash
-docker build -t tsundoku .    # needs the .git folder; the WebUI comes from the fork-customizations branch of tsundoku-WebUI
+docker build -t tsundoku .    # needs the .git folder; the WebUI comes from the master branch of tsundoku-WebUI
 ```
 
 Use `--build-arg WEBUI_REPO=...` and `--build-arg WEBUI_REF=...` to build another WebUI. The image is published to Docker Hub ([`jteaito/tsundoku`](https://hub.docker.com/r/jteaito/tsundoku)) and the GitHub Container Registry (`ghcr.io/jt-ito/tsundoku`) by `.github/workflows/docker_publish.yml` (a `v*` tag gives `:latest` and the version, a push to `master` gives `:edge`). The WebView needs the Chromium libraries the image installs; if it does not start on your host, set `KCEF_ENABLED=false`.

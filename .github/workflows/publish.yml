@@ -22,7 +22,7 @@ permissions:
 
 env:
   WEBUI_REPO: jt-ito/tsundoku-WebUI
-  WEBUI_REF: fork-customizations
+  WEBUI_REF: master
 
 jobs:
   build:

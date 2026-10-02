@@ -5,12 +5,12 @@
 #   docker build -t tsundoku .
 #   docker run -p 4567:4567 -v tsundoku-data:/data tsundoku
 #
-# The WebUI (branch fork-customizations) is cloned and built here. Pick another repository or branch with
+# The WebUI (branch master of tsundoku-WebUI) is cloned and built here. Pick another repository or branch with
 #   --build-arg WEBUI_REPO=https://github.com/you/your-webui.git --build-arg WEBUI_REF=my-branch
 # The build context must contain .git: the version number is the commit count.
 
 ARG WEBUI_REPO=https://github.com/jt-ito/tsundoku-WebUI.git
-ARG WEBUI_REF=fork-customizations
+ARG WEBUI_REF=master
 
 # ---------------------------------------------------------------- WebUI
 FROM node:24-bookworm-slim AS webui
