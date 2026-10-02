@@ -23,3 +23,11 @@ scripts/zulu*
 scripts/electron-*
 scripts/rcedit-*
 scripts/resources/*.so
+
+# Local notes, tooling and logs
+HANDOFF.md
+.claude/
+*.log
+.env
+.env.*
+!.env.template

@@ -8,7 +8,6 @@ import suwayomi.tachidesk.graphql.server.getAttribute
 import suwayomi.tachidesk.graphql.types.UserAccountType
 import suwayomi.tachidesk.server.JavalinSetup.Attribute
 import suwayomi.tachidesk.server.user.UserManager
-import suwayomi.tachidesk.server.user.UserType
 import suwayomi.tachidesk.server.user.requireAdmin
 import suwayomi.tachidesk.server.user.requireUser
 
