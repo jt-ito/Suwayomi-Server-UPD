@@ -1,3 +1,7 @@
+# Coming from Suwayomi's Docker image? Change the image, and the volumes: the data folder now goes to /data and the
+# downloads to /data/downloads (Suwayomi used /home/suwayomi/.local/share/Tachidesk, downloads first). Back up first.
+# Details: "Moving over from Suwayomi" in the README.
+
 services:
   tsundoku:
     image: jteaito/tsundoku:latest   # or ghcr.io/jt-ito/tsundoku:latest

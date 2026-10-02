@@ -181,6 +181,9 @@ For containers, environment variables set the matching setting and **win over `s
 | Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
 | WebView | `KCEF_ENABLED` |
 
+> [!NOTE]
+> Coming from Suwayomi's Docker image? The image, the volumes and a few variables have to change, see [Moving over from Suwayomi](#moving-over-from-suwayomi).
+
 A complete setup with a login, FlareSolverr and the built-in PostgreSQL (`docker-compose.yml`):
 
 ```yaml
@@ -245,9 +248,42 @@ The complete reference is in [docs/Configuring-Suwayomi‐Server.md](docs/Config
 
 ## Moving over from Suwayomi
 
-- Point tsundoku at your existing data folder, or restore a Suwayomi backup. Suwayomi's own backups can be restored here and tsundoku's can be restored there.
-- Existing single-user data becomes the first admin's. Set `AUTH_USERNAME` and `AUTH_PASSWORD` (or use `/setup`) before you expose the server.
-- The extension and tracker ecosystem is the same, so the same sources and tracking services work.
+You can reuse your existing data folder or restore a Suwayomi backup. Suwayomi's own backups can be restored here, and tsundoku's can be restored there. Existing single-user data becomes the first admin's, and the extensions, sources and trackers are the same.
+
+> [!IMPORTANT]
+> **Back up your data folder before the first start.** The first start upgrades the database for accounts, and that cannot be undone.
+
+### Coming from Suwayomi's Docker image
+
+Switching only the image is **not enough**. These settings of your existing compose file have to change:
+
+| Setting | Suwayomi | tsundoku |
+| --- | --- | --- |
+| `image` | the Suwayomi image you use now | `jteaito/tsundoku:latest` |
+| Data volume | `<your folder>:/home/suwayomi/.local/share/Tachidesk` | `<your folder>:/data` |
+| Downloads volume | `<your downloads>:/home/suwayomi/.local/share/Tachidesk/downloads` | `<your downloads>:/data/downloads` |
+| Volume order | downloads **first** | does not matter |
+| `WEBUI_FLAVOR` | sometimes set | remove it; the image serves the tsundoku-WebUI by itself |
+
+Keep the same host folders on the left of each volume line, so your library and downloads are picked up. Everything else carries over: `TZ`, `PUID`, `PGID`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `network_mode`, `depends_on` and the other variables work with the same names.
+
+```yaml
+services:
+  tsundoku:
+    image: jteaito/tsundoku:latest                                 # was the Suwayomi image
+    volumes:
+      - /your/downloads:/data/downloads                             # was .../Tachidesk/downloads
+      - /your/suwayomi/data:/data                                   # was .../.local/share/Tachidesk
+    environment:
+      - AUTH_USERNAME=owner                                         # at least 8 characters for the password
+      - AUTH_PASSWORD=change-me-please
+```
+
+After the first start check `docker logs`: it should say that the admin account was created, and the server should show the login page. Without `AUTH_USERNAME` and `AUTH_PASSWORD` it shows `/setup` instead.
+
+### Coming from a bare install
+
+Point tsundoku at the same data folder (it is the same location, see [Data folder](#data-folder)) or restore a backup into a fresh install. Set `AUTH_USERNAME` and `AUTH_PASSWORD`, or use `/setup`, before you expose the server.
 
 ## Development
 
