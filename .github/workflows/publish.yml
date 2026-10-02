@@ -1,221 +1,67 @@
-name: CI Publish
+name: Release
+
+# A v* tag builds the server jar and publishes it as a GitHub release; that is what the server's update check
+# looks at. The Docker image is published by docker_publish.yml on the same tag.
+#
+# The tag has to equal the version the build reports (v2.3.<commit count>), otherwise installs would compare it with
+# a different number and either never or always offer the update.
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - "v*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
-  check_wrapper:
-    name: Validate Gradle Wrapper
+  release:
+    name: Build jar and publish release
     runs-on: ubuntu-latest
     steps:
-      - name: Clone repo
-        uses: actions/checkout@v7
-
-      - name: Validate Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v5
-
-  build:
-    name: Build Jar
-    needs: check_wrapper
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout ${{ github.ref }}
+      - name: Checkout (full history: the version number is the commit count)
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref }}
-          path: master
           fetch-depth: 0
+
+      - name: Check that the tag is the build version
+        run: |
+          expected="v2.3.$(git rev-list HEAD --count)"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the version of this commit ($expected)."
+            exit 1
+          fi
 
       - name: Set up JDK
         uses: actions/setup-java@v6
         with:
-          java-version: 25
-          distribution: 'zulu'
+          java-version: 21
+          distribution: temurin
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Copy CI gradle.properties
-        run: |
-          cd master
-          mkdir -p ~/.gradle
-          cp .github/runner-files/ci-gradle.properties \
-            ~/.gradle/gradle.properties
-
-      - name: Build and copy webUI, Build Jar
+      - name: Build the jar
         env:
           ProductBuildType: "Stable"
-        working-directory: master
-        run: ./gradlew :server:downloadWebUI :server:shadowJar --stacktrace
+        run: ./gradlew :server:shadowJar --stacktrace
 
-      - name: Upload Jar
-        uses: actions/upload-artifact@v7
-        with:
-          name: jar
-          path: master/server/build/*.jar
-          if-no-files-found: error
-
-      - name: Upload icons
-        uses: actions/upload-artifact@v7
-        with:
-          name: icon
-          path: master/server/src/main/resources/icon
-          if-no-files-found: error
-
-      - name: Tar scripts dir to maintain file permissions
-        run: tar -cvzf scripts.tar.gz -C master/ scripts/
-
-      - name: Upload scripts.tar.gz
-        uses: actions/upload-artifact@v7
-        with:
-          name: scripts
-          path: scripts.tar.gz
-          if-no-files-found: error
-
-  jlink:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux-x64
-          - os: windows-latest
-            name: windows-x64
-          - os: macos-15
-            name: macOS-arm64
-          - os: macos-15-intel
-            name: macOS-x64
-        os: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
-
-    steps:
-      - name: Set up JDK
-        uses: actions/setup-java@v6
-        with:
-          java-version: 25
-          distribution: 'zulu'
-
-      - name: Package JDK
-        run: jlink --add-modules java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.naming,java.prefs,java.scripting,java.se,java.security.jgss,java.security.sasl,java.sql,java.transaction.xa,java.xml,jdk.attach,jdk.crypto.ec,jdk.jdi,jdk.management,jdk.net,jdk.unsupported,jdk.unsupported.desktop,jdk.zipfs,jdk.accessibility --output suwa --strip-debug --no-man-pages --no-header-files --compress=2
-
-      - name: Upload JDK package
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.name }}-jre
-          path: suwa
-
-  bundle:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: debian-all
-            jre: linux-x64
-          - name: appimage
-            jre: linux-x64
-          - name: linux-assets
-            jre: linux-assets
-          - name: linux-x64
-            jre: linux-x64
-          - name: macOS-x64
-            jre: macOS-x64
-          - name: macOS-arm64
-            jre: macOS-arm64
-          - name: windows-x64
-            jre: windows-x64
-        name: [debian-all, appimage, linux-assets, linux-x64, macOS-x64, macOS-arm64, windows-x64]
-
-    name: Make ${{ matrix.name }} release
-    needs: [build, jlink]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Jar
-        uses: actions/download-artifact@v8
-        with:
-          name: jar
-          path: server/build
-
-      - name: Download JRE
-        uses: actions/download-artifact@v8
-        if: matrix.name != 'linux-assets' && matrix.name != 'debian-all'
-        with:
-          name: ${{ matrix.jre }}-jre
-          path: jre
-
-      - name: Download icons
-        uses: actions/download-artifact@v8
-        with:
-          name: icon
-          path: server/src/main/resources/icon
-
-      - name: Download scripts.tar.gz
-        uses: actions/download-artifact@v8
-        with:
-          name: scripts
-
-      - name: Make ${{ matrix.name }} release
+      - name: Checksums
         run: |
-          mkdir upload/
-          tar -xvpf scripts.tar.gz
-          scripts/bundler.sh -o upload/ ${{ matrix.name }}
+          mkdir release
+          cp server/build/*.jar release/
+          cd release && sha256sum *.jar > Checksums.sha256
 
-      - name: Upload ${{ matrix.name }} files
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.name }}
-          path: upload/*
-          if-no-files-found: error
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: bundle
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: jar
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: debian-all
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: appimage
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: linux-assets
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: linux-x64
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: macOS-x64
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: macOS-arm64
-          path: release
-      - uses: actions/download-artifact@v8
-        with:
-          name: windows-x64
-          path: release
-
-      - name: Generate checksums
-        run: cd release && sha256sum * > Checksums.sha256
-
-      - name: Release
+      - name: Publish the release
         uses: softprops/action-gh-release@v3
         with:
-          token: ${{ secrets.DEPLOY_RELEASE_TOKEN }}
-          draft: true
           files: release/*
+          generate_release_notes: true
+          body: |
+            The server jar (needs JDK 21). It serves the default Suwayomi WebUI unless you set `WEB_UI_FLAVOR=CUSTOM`
+            and provide the [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) build.
+            For the complete setup with the tsundoku interface, use the Docker image: `docker pull jteaito/tsundoku:latest`.
