@@ -222,6 +222,15 @@ tasks {
                 excludeTags("live")
             }
         }
+        // -Pci (the GitHub runner): skip the tests that need a Chromium download, the native WebRTC library or exact
+        // timing; they pass on a developer machine but are not reliable on a bare runner
+        if (project.hasProperty("ci")) {
+            filter {
+                excludeTestsMatching("suwayomi.tachidesk.CefTest")
+                excludeTestsMatching("suwayomi.tachidesk.LooperTest")
+                excludeTestsMatching("suwayomi.tachidesk.global.impl.WebRtcStreamerTest")
+            }
+        }
         testLogging {
             showStandardStreams = true
             events("passed", "skipped", "failed")

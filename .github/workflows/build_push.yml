@@ -54,4 +54,4 @@ jobs:
         run: ./gradlew :server:compileKotlin :server:compileTestKotlin --stacktrace
 
       - name: Run tests
-        run: ./gradlew :server:test --stacktrace
+        run: ./gradlew :server:test -Pci --stacktrace
