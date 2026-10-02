@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_search_shortname">Búsqueda OPDS de Suwayomi</string>
+    <string name="opds_search_shortname">Búsqueda OPDS de tsundoku</string>
     <string name="opds_search_description">Buscar series en el catálogo.</string>
-    <string name="opds_feeds_root">Catálogo OPDS de Suwayomi</string>
+    <string name="opds_feeds_root">Catálogo OPDS de tsundoku</string>
     <string name="opds_feeds_manga_chapters">Capítulos de %1$s</string>
     <string name="opds_feeds_chapter_details">%1$s | Detalles de %2$s</string>
     <string name="opds_feeds_sources_title">Todas las fuentes</string>
@@ -93,7 +93,7 @@
     <string name="opds_manga_summary_status">Estado: %1$s</string>
     <string name="opds_manga_summary_source">Fuente: %1$s</string>
     <string name="opds_manga_summary_language">Idioma: %1$s</string>
-    <string name="webview_label_title">Vista web de Suwayomi</string>
+    <string name="webview_label_title">Vista web de tsundoku</string>
     <string name="label_error">Error</string>
     <string name="label_version">Versión <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="webview_label_disconnected">Desconectado, por favor actualizar</string>
@@ -103,7 +103,7 @@
     <string name="webview_label_getstarted">Ingresa una URL para comenzar</string>
     <string name="webview_label_loading">Cargando página...</string>
     <string name="webview_placeholder_url">Ingresa URL...</string>
-    <string name="login_label_title">Inicio de sesión de Suwayomi</string>
+    <string name="login_label_title">Inicio de sesión de tsundoku</string>
     <string name="login_label_username">Nombre de usuario</string>
     <string name="login_label_password">Contraseña</string>
     <string name="login_label_login">Iniciar sesión</string>

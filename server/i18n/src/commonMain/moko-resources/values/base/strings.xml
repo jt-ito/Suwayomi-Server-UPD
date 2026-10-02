@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- OPDS feed titles and descriptions -->
-    <string name="opds_feeds_root">Suwayomi OPDS Catalog</string>
+    <string name="opds_feeds_root">tsundoku OPDS Catalog</string>
     <string name="opds_feeds_manga_chapters">%1$s Chapters</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | Details</string>
 
@@ -44,7 +44,7 @@
     <string name="opds_feeds_source_specific_latest_title">Source: %1$s - Latest</string>
 
     <!-- OPDS search texts -->
-    <string name="opds_search_shortname">Suwayomi OPDS Search</string>
+    <string name="opds_search_shortname">tsundoku OPDS Search</string>
     <string name="opds_search_description">Search for series in the catalog.</string>
 
     <!-- OPDS errors -->
@@ -136,7 +136,7 @@
     <string name="label_version">Version <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">Close</string>
 
-    <string name="webview_label_title">Suwayomi WebView</string>
+    <string name="webview_label_title">tsundoku WebView</string>
     <string name="webview_label_disconnected">Disconnected, please refresh</string>
     <string name="webview_label_reversescroll">Reverse Scrolling</string>
     <string name="webview_label_bindingshint">Note: While focus is on the WebView part, no keybinds, including refresh, will be handled by the browser.</string>
@@ -148,7 +148,7 @@
     <string name="webview_label_login_required">Your configuration requires you to login. Please enter username and password.</string>
     <string name="webview_placeholder_url">Enter URL...</string>
 
-    <string name="login_label_title">Suwayomi Login</string>
+    <string name="login_label_title">tsundoku Login</string>
     <string name="login_label_username">Username</string>
     <string name="login_label_password">Password</string>
     <string name="login_label_login">Log In</string>

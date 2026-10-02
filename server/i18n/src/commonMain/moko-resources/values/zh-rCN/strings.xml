@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_search_shortname">Suwayomi OPDS 搜索</string>
+    <string name="opds_search_shortname">tsundoku OPDS 搜索</string>
     <string name="opds_search_description">在目录中搜索漫画。</string>
     <string name="opds_facet_sort_newest_first">最新优先</string>
     <string name="opds_facet_sort_date_asc">日期升序</string>
@@ -15,7 +15,7 @@
     <string name="manga_status_ongoing">连载中</string>
     <string name="manga_status_completed">已完结</string>
     <string name="opds_feeds_sources_title">所有来源</string>
-    <string name="opds_feeds_root">Suwayomi OPDS 目录</string>
+    <string name="opds_feeds_root">tsundoku OPDS 目录</string>
     <string name="opds_feeds_manga_chapters">%1$s 章节</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | 详情</string>
     <string name="opds_feeds_categories_title">分类</string>
@@ -104,7 +104,7 @@
     <string name="opds_manga_summary_language">语言：%1$s</string>
     <string name="label_version">版本 <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">关闭</string>
-    <string name="webview_label_title">Suwayomi 内置浏览器</string>
+    <string name="webview_label_title">tsundoku 内置浏览器</string>
     <string name="webview_label_disconnected">连接失败，请刷新</string>
     <string name="webview_label_reversescroll">反向滚动</string>
     <string name="webview_label_bindingshint">注意：当焦点在 WebView 部分时，包括刷新在内的所有快捷键都不会由浏览器处理。</string>
@@ -115,7 +115,7 @@
     <string name="webview_label_copy_description">自动复制到剪贴板失败，请使用下面的输入框手动复制该值。</string>
     <string name="webview_label_login_required">您的配置需要登录。请输入用户名和密码。</string>
     <string name="webview_placeholder_url">输入 URL……</string>
-    <string name="login_label_title">Suwayomi 登陆</string>
+    <string name="login_label_title">tsundoku 登陆</string>
     <string name="login_label_username">用户名</string>
     <string name="login_label_password">密码</string>
     <string name="login_label_login">登入</string>

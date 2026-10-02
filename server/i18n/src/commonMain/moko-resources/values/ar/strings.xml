@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_feeds_root">فهرس Suwayomi OPDS</string>
+    <string name="opds_feeds_root">فهرس tsundoku OPDS</string>
     <string name="opds_feeds_manga_chapters">%1$s فصل</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | التفاصيل</string>
     <string name="opds_feeds_explore_title">المستكشف</string>
@@ -113,7 +113,7 @@
     <string name="webview_label_copy_description">فشلت عملية النسخ التلقائي للحافظة، يرجى استخدام المدخلات أدناه لنسخ القيمة يدويًا.</string>
     <string name="webview_label_login_required">يتطلب إعداد حسابك تسجيل الدخول. يرجى إدخال اسم المستخدم وكلمة المرور.</string>
     <string name="webview_placeholder_url">أدخل الرابط...</string>
-    <string name="login_label_title">تسجيل دخول Suwayomi</string>
+    <string name="login_label_title">تسجيل دخول tsundoku</string>
     <string name="login_label_username">اسم المستخدم</string>
     <string name="login_label_password">كلمة المرور</string>
     <string name="login_label_login">تسجيل الدخول</string>

@@ -792,8 +792,8 @@
                         document.title = origTitle;
                         titleDiv.textContent = origTitle;
                     } else {
-                        document.title = "Suwayomi: " + title;
-                        titleDiv.textContent = "Suwayomi: " + title;
+                        document.title = "tsundoku: " + title;
+                        titleDiv.textContent = "tsundoku: " + title;
                     }
                 }
 

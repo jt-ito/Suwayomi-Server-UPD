@@ -12,7 +12,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Database Engine — Suwayomi</title>
+    <title>Database Engine — tsundoku</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -953,7 +953,7 @@
                         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
                         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
                     </svg>
-                    <span>Suwayomi</span>
+                    <span>tsundoku</span>
                 </a>
                 <span class="separator">/</span>
                 <span class="current-page">Database Engine</span>
@@ -1215,7 +1215,7 @@
     </main>
 
     <footer>
-        Suwayomi-Server &bull; Database Engine Management &bull; Open Source
+        tsundoku &bull; Database Engine Management &bull; Open Source
     </footer>
 
     <dialog class="confirm-dialog" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">

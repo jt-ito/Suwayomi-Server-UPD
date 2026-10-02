@@ -26,7 +26,7 @@ object SettingsController {
         handler(
             documentWith = {
                 withOperation {
-                    summary("About Suwayomi-Server")
+                    summary("About tsundoku")
                     description("Returns some static info about the current app build")
                 }
             },
@@ -44,7 +44,7 @@ object SettingsController {
         handler(
             documentWith = {
                 withOperation {
-                    summary("Suwayomi-Server update check")
+                    summary("tsundoku update check")
                     description("Check for app updates")
                 }
             },

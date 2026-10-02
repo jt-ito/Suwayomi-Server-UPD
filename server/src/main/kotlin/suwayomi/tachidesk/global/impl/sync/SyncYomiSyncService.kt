@@ -57,7 +57,7 @@ object SyncYomiSyncService {
         val protocolV2: Boolean,
     )
 
-    private const val DEVICE_NAME = "Suwayomi Server"
+    private const val DEVICE_NAME = "tsundoku"
     private const val PREF_DEVICE_ID = "device_id"
     private const val PREF_CURSOR = "sync_cursor"
     private const val PREF_FULL_REQUESTED = "full_sync_requested"

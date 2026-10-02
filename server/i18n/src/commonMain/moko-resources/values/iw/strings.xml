@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_feeds_root">⁧קטלוג ‏OPDS‏ של ‏Suwayomi‏⁩</string>
+    <string name="opds_feeds_root">⁧קטלוג ‏OPDS‏ של ‏tsundoku‏⁩</string>
     <string name="opds_feeds_manga_chapters">⁧פרקים של ‏%1$s‏⁩</string>
     <string name="opds_feeds_chapter_details">⁧‏%1$s‏ | ‏%2$s‏ | ‏פרטי הפרק⁩</string>
     <string name="opds_feeds_history_title">היסטוריה</string>
@@ -29,7 +29,7 @@
     <string name="opds_feeds_library_source_specific_title">⁧ספרייה - מקור: ‏%1$s‏⁩</string>
     <string name="opds_feeds_source_specific_popular_title">⁧מקור: ‏%1$s‏ - פופולרי⁩</string>
     <string name="opds_feeds_source_specific_latest_title">⁧מקור: ‏%1$s‏ - עדכני⁩</string>
-    <string name="opds_search_shortname">⁧חיפוש בקטלוג ‏OPDS‏ של ‏Suwayomi‏⁩</string>
+    <string name="opds_search_shortname">⁧חיפוש בקטלוג ‏OPDS‏ של ‏tsundoku‏⁩</string>
     <string name="opds_search_description">חיפוש סדרות בקטלוג.</string>
     <string name="opds_error_manga_not_found">⁧לא נמצאה סדרה עם המזהה ‏%1$d‏⁩.</string>
     <string name="opds_error_chapter_not_found">⁧לא נמצא פרק עם האינדקס ‏%1$d‏⁩.</string>
@@ -86,7 +86,7 @@
     <string name="opds_manga_summary_language">⁧שפה: ‏%1$s‏⁩</string>
     <string name="label_error">שגיאה</string>
     <string name="label_close">סגירה</string>
-    <string name="webview_label_title">⁧‏Suwayomi‏: תצוגת ‏WebView‏⁩</string>
+    <string name="webview_label_title">⁧‏tsundoku‏: תצוגת ‏WebView‏⁩</string>
     <string name="webview_label_disconnected">החיבור נותק, יש לרענן את העמוד</string>
     <string name="webview_label_reversescroll">היפוך כיוון הגלילה</string>
     <string name="webview_label_bindingshint">⁧⁧הערה: כאשר המיקוד נמצא באזור ה- ‏WebView‏, מקשי הקיצור של הדפדפן, כולל רענון, לא יפעלו⁩.</string>
@@ -97,7 +97,7 @@
     <string name="webview_label_copy_description">ההעתקה האוטומטית ללוח נכשלה. יש להשתמש בשדה שלמטה כדי להעתיק את הערך ידנית.</string>
     <string name="webview_label_login_required">לפי ההגדרות, נדרשת התחברות. יש להזין שם משתמש וסיסמה.</string>
     <string name="webview_placeholder_url">⁧כתובת ‏URL‏⁩...</string>
-    <string name="login_label_title">⁧התחברות ל- ‏Suwayomi‏⁩</string>
+    <string name="login_label_title">⁧התחברות ל- ‏tsundoku‏⁩</string>
     <string name="login_label_username">שם משתמש</string>
     <string name="login_label_password">סיסמא</string>
     <string name="login_label_login">התחברות</string>

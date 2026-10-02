@@ -28,7 +28,7 @@ enum class ExitCode(
 }
 
 fun shutdownApp(exitCode: ExitCode) {
-    logger.info { "Shutting Down Suwayomi-Server. Goodbye! (reason= ${exitCode.code} (${exitCode.name}))" }
+    logger.info { "Shutting Down tsundoku. Goodbye! (reason= ${exitCode.code} (${exitCode.name}))" }
 
     exitProcess(exitCode.code)
 }

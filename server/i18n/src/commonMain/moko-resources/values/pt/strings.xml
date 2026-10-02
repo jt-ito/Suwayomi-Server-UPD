@@ -19,8 +19,8 @@
     <string name="opds_feeds_library_updates_title">Histórico de Atualizações da Biblioteca</string>
     <string name="opds_feeds_library_updates_entry_content">Capítulos atualizados recentemente da sua biblioteca</string>
     <string name="opds_feeds_status_specific_title">Status: %1$s</string>
-    <string name="opds_feeds_root">Catálogo OPDS Suwayomi</string>
-    <string name="opds_search_shortname">Busca OPDS Suwayomi</string>
+    <string name="opds_feeds_root">Catálogo OPDS tsundoku</string>
+    <string name="opds_search_shortname">Busca OPDS tsundoku</string>
     <string name="opds_error_manga_not_found">Série com ID %1$d não encontrada.</string>
     <string name="opds_error_chapter_not_found">Capítulo com índice %1$d não encontrado.</string>
     <string name="opds_facetgroup_sort_order">Ordem de Classificação</string>
@@ -105,7 +105,7 @@
     <string name="label_error">Erro</string>
     <string name="label_version">Versão <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">Fechar</string>
-    <string name="webview_label_title">WebView Suwayomi</string>
+    <string name="webview_label_title">WebView tsundoku</string>
     <string name="webview_label_disconnected">Desconectado, por favor, atualize</string>
     <string name="webview_label_reversescroll">Rolagem Reversa</string>
     <string name="webview_label_bindingshint">Nota: Enquanto o foco estiver na parte do WebView, nenhum atalho de teclado, incluindo o de atualizar, será gerenciado pelo navegador.</string>
@@ -116,7 +116,7 @@
     <string name="webview_label_copy_description">A cópia automática para a área de transferência falhou. Por favor, use o campo abaixo para copiar o valor manualmente.</string>
     <string name="webview_label_login_required">Sua configuração exige que você faça login. Por favor, insira nome de usuário e senha.</string>
     <string name="webview_placeholder_url">Insira a URL...</string>
-    <string name="login_label_title">Login Suwayomi</string>
+    <string name="login_label_title">Login tsundoku</string>
     <string name="login_label_username">Nome de usuário</string>
     <string name="login_label_password">Senha</string>
     <string name="login_label_login">Entrar</string>

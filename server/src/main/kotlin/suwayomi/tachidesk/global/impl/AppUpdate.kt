@@ -23,8 +23,8 @@ data class UpdateDataClass(
 )
 
 object AppUpdate {
-    private const val LATEST_STABLE_CHANNEL_URL = "https://api.github.com/repos/jt-ito/Suwayomi-Server-UPD/releases/latest"
-    private const val LATEST_PREVIEW_CHANNEL_URL = "https://api.github.com/repos/jt-ito/Suwayomi-Server-UPD/releases/latest"
+    private const val LATEST_STABLE_CHANNEL_URL = "https://api.github.com/repos/jt-ito/tsundoku/releases/latest"
+    private const val LATEST_PREVIEW_CHANNEL_URL = "https://api.github.com/repos/jt-ito/tsundoku/releases/latest"
 
     private val json: Json by injectLazy()
     private val network: NetworkHelper by injectLazy()

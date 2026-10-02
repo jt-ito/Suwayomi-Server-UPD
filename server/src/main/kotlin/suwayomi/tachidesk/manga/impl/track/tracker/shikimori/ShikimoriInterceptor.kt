@@ -39,7 +39,7 @@ class ShikimoriInterceptor(
             originalRequest
                 .newBuilder()
                 .addHeader("Authorization", "Bearer ${oauth!!.accessToken}")
-                .header("User-Agent", "Suwayomi v${AppInfo.getVersionName()})")
+                .header("User-Agent", "tsundoku v${AppInfo.getVersionName()})")
                 .build()
 
         return chain.proceed(authRequest)

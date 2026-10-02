@@ -79,7 +79,7 @@ object DBManager {
                 leakDetectionThreshold = 1.minutes.inWholeMilliseconds
 
                 // Pool name for monitoring
-                poolName = "Suwayomi-DB-Pool"
+                poolName = "tsundoku-db-pool"
             }
         return HikariDataSource(config)
     }

@@ -74,9 +74,9 @@ object AppMutex {
             }
 
             AppMutexState.TachideskInstanceRunning -> {
-                logger.info { "Another instance of Suwayomi-Server is running on $appIP:${serverConfig.port.value}" }
+                logger.info { "Another instance of tsundoku is running on $appIP:${serverConfig.port.value}" }
 
-                logger.info { "Probably user thought Suwayomi-Server is closed so, opening webUI in browser again." }
+                logger.info { "Probably user thought tsundoku is closed so, opening webUI in browser again." }
                 openInBrowser()
 
                 logger.info { "Aborting startup." }
@@ -85,7 +85,7 @@ object AppMutex {
             }
 
             AppMutexState.OtherApplicationRunning -> {
-                logger.error { "A non Suwayomi-Server application is running on $appIP:${serverConfig.port.value}, aborting startup." }
+                logger.error { "A non tsundoku application is running on $appIP:${serverConfig.port.value}, aborting startup." }
                 shutdownApp(MutexCheckFailedAnotherAppRunning)
             }
         }

@@ -5,9 +5,9 @@
     <string name="opds_feeds_categories_title">Danh mục</string>
     <string name="opds_feeds_categories_entry_content">Duyệt truyện được sắp xếp theo danh mục</string>
     <string name="opds_feeds_genres_title">Thể loại</string>
-    <string name="opds_feeds_root">Suwayomi OPDS Danh mục</string>
+    <string name="opds_feeds_root">tsundoku OPDS Danh mục</string>
     <string name="opds_feeds_sources_title">Tất cả các nguồn</string>
-    <string name="opds_search_shortname">Suwayomi OPDS Tìm kiếm</string>
+    <string name="opds_search_shortname">tsundoku OPDS Tìm kiếm</string>
     <string name="opds_feeds_manga_chapters">%1$s Chương</string>
     <string name="opds_feeds_genres_entry_content">Duyệt truyện theo thể loại</string>
     <string name="opds_feeds_status_title">Trạng thái</string>
@@ -95,7 +95,7 @@
     <string name="opds_manga_summary_language">Ngôn ngữ: %1$s</string>
     <string name="label_error">Lỗi</string>
     <string name="label_version">Phiên bản <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
-    <string name="webview_label_title">Suwayomi WebView</string>
+    <string name="webview_label_title">tsundoku WebView</string>
     <string name="webview_label_disconnected">Đã ngắt kết nối, vui lòng làm mới</string>
     <string name="webview_label_reversescroll">Cuộn ngược</string>
     <string name="webview_label_bindingshint">Lưu ý: Khi tập trung vào phần WebView, trình duyệt sẽ không xử lý bất kỳ phím tắt nào, kể cả phím làm mới.</string>
@@ -103,7 +103,7 @@
     <string name="webview_label_getstarted">Nhập URL để bắt đầu</string>
     <string name="webview_label_loading">Đang tải trang...</string>
     <string name="webview_placeholder_url">Nhập URL...</string>
-    <string name="login_label_title">Đăng nhập Suwayomi</string>
+    <string name="login_label_title">Đăng nhập tsundoku</string>
     <string name="login_label_username">Tên người dùng</string>
     <string name="login_label_password">Mật khẩu</string>
     <string name="login_label_login">Đăng nhập</string>

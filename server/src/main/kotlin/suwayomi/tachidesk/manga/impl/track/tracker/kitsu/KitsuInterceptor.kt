@@ -40,7 +40,7 @@ class KitsuInterceptor(
             originalRequest
                 .newBuilder()
                 .addHeader("Authorization", "Bearer ${oauth!!.accessToken}")
-                .header("User-Agent", "Suwayomi ${BuildConfig.VERSION} (${BuildConfig.REVISION})")
+                .header("User-Agent", "tsundoku ${BuildConfig.VERSION} (${BuildConfig.REVISION})")
                 .header("Accept", "application/vnd.api+json")
                 .header("Content-Type", "application/vnd.api+json")
                 .build()

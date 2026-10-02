@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_feeds_root">Catàleg OPDS de Suwayomi</string>
+    <string name="opds_feeds_root">Catàleg OPDS de tsundoku</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | Detalls</string>
     <string name="opds_feeds_manga_chapters">%1$s capítols</string>
     <string name="opds_feeds_explore_entry_content">Explora sèries noves de les vostres fonts</string>
@@ -29,7 +29,7 @@
     <string name="opds_feeds_library_source_specific_title">Biblioteca - Font: %1$s</string>
     <string name="opds_feeds_language_specific_title">Idioma: %1$s</string>
     <string name="opds_feeds_source_specific_title">Font: %1$s</string>
-    <string name="opds_search_shortname">Cerca OPDS de Suwayomi</string>
+    <string name="opds_search_shortname">Cerca OPDS de tsundoku</string>
     <string name="opds_feeds_source_specific_popular_title">Font: %1$s - Populars</string>
     <string name="opds_feeds_source_specific_latest_title">Font: %1$s - Novetats</string>
     <string name="opds_error_manga_not_found">No s\'ha trobat la sèrie amb l\'ID %1$d.</string>
@@ -107,7 +107,7 @@
     <string name="label_version">Versió <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">Tanca</string>
     <string name="webview_label_disconnected">Desconnectat; actualitzeu la pàgina</string>
-    <string name="webview_label_title">WebView de Suwayomi</string>
+    <string name="webview_label_title">WebView de tsundoku</string>
     <string name="webview_label_reversescroll">Desplaçament invers</string>
     <string name="webview_label_init">S\'està inicialitzant... Espereu</string>
     <string name="webview_label_bindingshint">Nota: mentre el focus sigui a la part del WebView, el navegador no gestionarà cap drecera de teclat, ni tan sols la d\'actualitzar.</string>
@@ -119,7 +119,7 @@
     <string name="webview_label_copy_description">La còpia automàtica al porta-retalls ha fallat; feu servir el camp de sota per copiar el valor manualment.</string>
     <string name="login_label_password">Contrasenya</string>
     <string name="login_label_username">Nom d\'usuari</string>
-    <string name="login_label_title">Inici de sessió a Suwayomi</string>
+    <string name="login_label_title">Inici de sessió a tsundoku</string>
     <string name="login_placeholder_password">Secret...</string>
     <string name="login_placeholder_username">Escriviu el nom d\'usuari...</string>
     <string name="login_label_login">Inicia la sessió</string>

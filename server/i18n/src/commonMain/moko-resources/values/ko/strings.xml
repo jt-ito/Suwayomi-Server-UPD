@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_feeds_root">Suwayomi OPDS 카탈로그</string>
+    <string name="opds_feeds_root">tsundoku OPDS 카탈로그</string>
     <string name="opds_feeds_manga_chapters">%1$s 챕터</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | 상세 정보</string>
     <string name="opds_feeds_explore_title">탐색</string>
@@ -31,7 +31,7 @@
     <string name="opds_feeds_library_source_specific_title">라이브러리 - 소스: %1$s</string>
     <string name="opds_feeds_source_specific_popular_title">소스: %1$s - 인기</string>
     <string name="opds_feeds_source_specific_latest_title">소스: %1$s - 최신</string>
-    <string name="opds_search_shortname">Suwayomi OPDS 검색</string>
+    <string name="opds_search_shortname">tsundoku OPDS 검색</string>
     <string name="opds_search_description">카탈로그에서 작품 검색.</string>
     <string name="opds_error_manga_not_found">ID가 %1$d인 작품을 찾을 수 없습니다.</string>
     <string name="opds_error_chapter_not_found">인덱스가 %1$d인 챕터를 찾을 수 없습니다.</string>
@@ -106,7 +106,7 @@
     <string name="label_error">오류</string>
     <string name="label_version">버전 <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">닫기</string>
-    <string name="webview_label_title">Suwayomi WebView</string>
+    <string name="webview_label_title">tsundoku WebView</string>
     <string name="webview_label_disconnected">연결이 끊겼습니다. 새로고침해 주세요</string>
     <string name="webview_label_reversescroll">스크롤 방향 반전</string>
     <string name="webview_label_bindingshint">참고: WebView 영역에 포커스가 있는 동안에는 새로고침을 포함한 어떤 단축키도 브라우저에서 처리되지 않습니다.</string>
@@ -117,7 +117,7 @@
     <string name="webview_label_copy_description">클립보드 자동 복사에 실패했습니다. 아래 입력란에서 값을 직접 복사해 주세요.</string>
     <string name="webview_label_login_required">현재 설정에서는 로그인이 필요합니다. 사용자 이름과 비밀번호를 입력해 주세요.</string>
     <string name="webview_placeholder_url">URL 입력...</string>
-    <string name="login_label_title">Suwayomi 로그인</string>
+    <string name="login_label_title">tsundoku 로그인</string>
     <string name="login_label_username">사용자 이름</string>
     <string name="login_label_password">비밀번호</string>
     <string name="login_label_login">로그인</string>

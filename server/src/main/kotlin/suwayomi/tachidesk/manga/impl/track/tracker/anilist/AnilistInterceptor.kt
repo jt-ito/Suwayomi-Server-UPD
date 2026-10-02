@@ -48,7 +48,7 @@ class AnilistInterceptor(
             originalRequest
                 .newBuilder()
                 .addHeader("Authorization", "Bearer ${oauth!!.accessToken}")
-                .header("User-Agent", "Suwayomi ${BuildConfig.VERSION} (${BuildConfig.REVISION})")
+                .header("User-Agent", "tsundoku ${BuildConfig.VERSION} (${BuildConfig.REVISION})")
                 .build()
 
         return chain.proceed(authRequest)

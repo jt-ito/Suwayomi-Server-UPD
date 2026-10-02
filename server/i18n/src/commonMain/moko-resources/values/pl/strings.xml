@@ -12,8 +12,8 @@
     <string name="opds_chapter_status_unread">⭕</string>
     <string name="opds_linktitle_next_page">Następna Strona</string>
     <string name="opds_feeds_manga_chapters">%1$s Rozdziały</string>
-    <string name="opds_search_shortname">Suwayomi Wyszukiwanie OPDS</string>
-    <string name="opds_feeds_root">Suwayomi Katalog OPDS</string>
+    <string name="opds_search_shortname">tsundoku Wyszukiwanie OPDS</string>
+    <string name="opds_feeds_root">tsundoku Katalog OPDS</string>
     <string name="opds_feeds_sources_title">Wszystkie Źródła</string>
     <string name="opds_feeds_genres_title">Gatunki</string>
     <string name="opds_feeds_status_title">Status</string>

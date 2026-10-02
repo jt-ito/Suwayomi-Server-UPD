@@ -42,7 +42,7 @@ object SystemTray {
 
                 mainMenu.add(
                     MenuItem(
-                        "Open Suwayomi",
+                        "Open tsundoku",
                     ) {
                         openInBrowser()
                     },

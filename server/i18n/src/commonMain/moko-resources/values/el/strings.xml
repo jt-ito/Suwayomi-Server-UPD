@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="opds_feeds_root">Suwayomi OPDS Κατάλογος</string>
+    <string name="opds_feeds_root">tsundoku OPDS Κατάλογος</string>
     <string name="opds_feeds_manga_chapters">Κεφάλαια %1$s</string>
     <string name="opds_feeds_chapter_details">%1$s | %2$s | Λεπτομέρειες</string>
     <string name="opds_feeds_explore_title">Εξερεύνηση</string>
@@ -31,7 +31,7 @@
     <string name="opds_feeds_library_source_specific_title">Βιβλιοθήκη - Πηγή: %1$s</string>
     <string name="opds_feeds_source_specific_popular_title">Πηγή: %1$s - Δημοφιλές</string>
     <string name="opds_feeds_source_specific_latest_title">Πηγή: %1$s - Τελευταίο</string>
-    <string name="opds_search_shortname">Suwayomi OPDS Αναζήτηση</string>
+    <string name="opds_search_shortname">tsundoku OPDS Αναζήτηση</string>
     <string name="opds_search_description">Αναζήτηση σειρών στον κατάλογο.</string>
     <string name="opds_error_manga_not_found">Η σειρά με ID %1$d δεν βρέθηκε.</string>
     <string name="opds_error_chapter_not_found">Το κεφάλαιο με δείκτη %1$d δεν βρέθηκε.</string>
@@ -105,7 +105,7 @@
     <string name="label_error">Σφάλμα</string>
     <string name="label_version">Έκδοση <xliff:g id="version" example="v2.0.1833">%1$s</xliff:g></string>
     <string name="label_close">Κλείσε</string>
-    <string name="webview_label_title">Suwayomi WebView</string>
+    <string name="webview_label_title">tsundoku WebView</string>
     <string name="webview_label_disconnected">Αποσυνδεδεμένο, κάνε ανανέωση</string>
     <string name="webview_label_reversescroll">Αντίστροφη κύλιση</string>
     <string name="webview_label_bindingshint">Σημείωση: Όταν η εστίαση είναι στο τμήμα WebView, καμία συντόμευση πληκτρολογίου, συμπεριλαμβανομένης της ανανέωσης, δεν θα αντιμετωπίζεται από το πρόγραμμα περιήγησης.</string>
@@ -116,7 +116,7 @@
     <string name="webview_label_copy_description">Η αυτόματη αντιγραφή στο πρόχειρο απέτυχε, χρησιμοποίησε το παρακάτω πεδίο για να αντιγράψεις χειροκίνητα την τιμή.</string>
     <string name="webview_label_login_required">Η διαμόρφωσή σου απαιτεί σύνδεση. Εισήγαγε όνομα χρήστη και κωδικό.</string>
     <string name="webview_placeholder_url">Εισήγαγε URL...</string>
-    <string name="login_label_title">Suwayomi Σύνδεση</string>
+    <string name="login_label_title">tsundoku Σύνδεση</string>
     <string name="login_label_username">Όνομα χρήστη</string>
     <string name="login_label_password">Κωδικός</string>
     <string name="login_label_login">Σύνδεση</string>
