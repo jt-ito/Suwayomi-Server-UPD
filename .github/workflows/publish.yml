@@ -1,7 +1,8 @@
 name: Release
 
-# A v* tag builds the server jar and publishes it as a GitHub release; that is what the server's update check
-# looks at. The Docker image is published by docker_publish.yml on the same tag.
+# A v* tag builds the server jar and a ready-to-run archive per platform (Java runtime + jar + the tsundoku-WebUI) and
+# publishes them as a GitHub release; that is what the server's update check looks at. The Docker image is published by
+# docker_publish.yml on the same tag. "Run workflow" builds everything without publishing, to try the pipeline.
 #
 # The tag has to equal the version the build reports (v2.3.<commit count>), otherwise installs would compare it with
 # a different number and either never or always offer the update.
@@ -10,6 +11,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,21 +20,29 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  WEBUI_REPO: jt-ito/tsundoku-WebUI
+  WEBUI_REF: fork-customizations
+
 jobs:
-  release:
-    name: Build jar and publish release
+  build:
+    name: Build the jar
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: "Checkout (full history, the version number is the commit count)"
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Check that the tag is the build version
+      - name: Work out the version and check the tag
+        id: version
         run: |
-          expected="v2.3.$(git rev-list HEAD --count)"
-          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match the version of this commit ($expected)."
+          version="v2.3.$(git rev-list HEAD --count)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the version of this commit ($version)."
             exit 1
           fi
 
@@ -55,11 +65,148 @@ jobs:
           ProductBuildType: "Stable"
         run: ./gradlew :server:shadowJar --stacktrace
 
-      - name: Checksums
+      - name: Upload the jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: jar
+          path: server/build/*.jar
+          if-no-files-found: error
+
+  webui:
+    name: Build the tsundoku-WebUI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the WebUI
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.WEBUI_REPO }}
+          ref: ${{ env.WEBUI_REF }}
+          path: webui
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Build
+        working-directory: webui
+        env:
+          CI: "true"
+          HUSKY: "0"
         run: |
-          mkdir release
-          cp server/build/*.jar release/
-          cd release && sha256sum *.jar > Checksums.sha256
+          corepack enable
+          pnpm build
+          # the server reads the version of a custom WebUI from this file and shows the splash screen without it
+          echo r1 > build/revision
+
+      - name: Upload the WebUI
+        uses: actions/upload-artifact@v7
+        with:
+          name: webui
+          path: webui/build
+          if-no-files-found: error
+
+  bundle:
+    name: Bundle ${{ matrix.name }}
+    needs: [build, webui]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+          - name: macOS-arm64
+            os: macos-15
+          - name: macOS-x64
+            os: macos-15-intel
+          - name: windows-x64
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout (for the launcher scripts)
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Package a small Java runtime
+        run: jlink --add-modules java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.naming,java.prefs,java.scripting,java.se,java.security.jgss,java.security.sasl,java.sql,java.transaction.xa,java.xml,jdk.attach,jdk.crypto.ec,jdk.jdi,jdk.management,jdk.net,jdk.unsupported,jdk.unsupported.desktop,jdk.zipfs,jdk.accessibility --output jre --strip-debug --no-man-pages --no-header-files --compress=zip-6
+
+      - name: Download the jar
+        uses: actions/download-artifact@v8
+        with:
+          name: jar
+          path: jar
+
+      - name: Download the WebUI
+        uses: actions/download-artifact@v8
+        with:
+          name: webui
+          path: webui
+
+      - name: Assemble and archive
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          dir="tsundoku-$VERSION-${{ matrix.name }}"
+          mkdir "$dir"
+          cp -R jre "$dir/jre"
+          cp -R webui "$dir/webUI"
+          cp jar/*.jar "$dir/tsundoku.jar"
+          case "${{ matrix.name }}" in
+            windows-x64)
+              cp scripts/tsundoku/tsundoku.bat "$dir/tsundoku.bat"
+              7z a -tzip "$dir.zip" "$dir" > /dev/null
+              echo "ARCHIVE=$dir.zip" >> "$GITHUB_ENV"
+              ;;
+            macOS-*)
+              cp scripts/tsundoku/tsundoku.sh "$dir/tsundoku.command"
+              chmod +x "$dir/tsundoku.command"
+              tar -czf "$dir.tar.gz" "$dir"
+              echo "ARCHIVE=$dir.tar.gz" >> "$GITHUB_ENV"
+              ;;
+            *)
+              cp scripts/tsundoku/tsundoku.sh "$dir/tsundoku.sh"
+              chmod +x "$dir/tsundoku.sh"
+              tar -czf "$dir.tar.gz" "$dir"
+              echo "ARCHIVE=$dir.tar.gz" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+      - name: Upload the archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundle-${{ matrix.name }}
+          path: ${{ env.ARCHIVE }}
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    if: github.ref_type == 'tag'
+    needs: [build, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the jar
+        uses: actions/download-artifact@v8
+        with:
+          name: jar
+          path: release
+
+      - name: Download the archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: bundle-*
+          path: release
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd release && sha256sum * > Checksums.sha256
 
       - name: Publish the release
         uses: softprops/action-gh-release@v3
@@ -67,6 +214,9 @@ jobs:
           files: release/*
           generate_release_notes: true
           body: |
-            The server jar (needs JDK 21). It serves the default Suwayomi WebUI unless you set `WEB_UI_FLAVOR=CUSTOM`
-            and provide the [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) build.
-            For the complete setup with the tsundoku interface, use the Docker image: `docker pull jteaito/tsundoku:latest`.
+            Unpack an archive and start `tsundoku.bat` (Windows), `tsundoku.command` (macOS) or `tsundoku.sh` (Linux). Each one
+            brings its own Java runtime and the tsundoku interface. The plain jar needs JDK 21 and serves the default Suwayomi
+            WebUI unless you set `WEB_UI_FLAVOR=CUSTOM` and provide the [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) build.
+            Docker: `docker pull jteaito/tsundoku:latest`.
+
+            The archives are not signed: Windows SmartScreen and macOS Gatekeeper will ask for confirmation the first time.

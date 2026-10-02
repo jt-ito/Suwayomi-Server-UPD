@@ -29,3 +29,5 @@
 *.avif binary
 *.heif binary
 *.jxl binary
+# Windows launcher
+*.bat text eol=crlf
