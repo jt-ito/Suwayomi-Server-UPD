@@ -49,7 +49,7 @@ RUN apt-get update \
         libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxkbcommon0 libx11-6 libxcb1 libxext6 libxi6 libxtst6 \
         libpango-1.0-0 libcairo2 libasound2t64 libdbus-1-3 libglib2.0-0t64 libgtk-3-0t64 \
     && rm -rf /var/lib/apt/lists/* \
-    # run as an unprivileged user (the built-in PostgreSQL refuses to start as root)
+    # the server runs as an unprivileged user (the built-in PostgreSQL refuses to start as root)
     && (userdel -r ubuntu 2>/dev/null || true) \
     && groupadd -g 1000 tsundoku \
     && useradd -u 1000 -g 1000 -m -d /home/tsundoku -s /usr/sbin/nologin tsundoku \
@@ -72,7 +72,7 @@ LABEL org.opencontainers.image.title="tsundoku" \
       org.opencontainers.image.source="https://github.com/jt-ito/tsundoku" \
       org.opencontainers.image.licenses="MPL-2.0"
 
-USER tsundoku
+# starts as root only to fix the ownership of /data and /data/downloads, then runs as tsundoku (see the entrypoint)
 WORKDIR /data
 VOLUME /data
 EXPOSE 4567
