@@ -7,9 +7,16 @@ services:
     ports:
       - "4567:4567"
     volumes:
+      # Everything the server keeps (database, settings, extensions, backups, logs) lives in /data.
       - tsundoku-data:/data
+      # Where downloaded chapters go. Set DOWNLOADS_PATH to a folder on your machine to keep them there,
+      # for example DOWNLOADS_PATH=/mnt/manga in an .env file next to this one. Without it a Docker volume is used.
+      # The container gives the folder to its own user on start, so no chown is needed.
+      # It sits inside /data on purpose; Docker mounts the outer path first, so the list order does not matter.
+      - ${DOWNLOADS_PATH:-tsundoku-downloads}:/data/downloads
     environment:
       - TZ=Etc/UTC
+
       # Skips the /setup page: the admin account is created from these on first start.
       # Without them, open the server and follow /setup (from another device it asks for the
       # setup code printed in `docker logs tsundoku`).
@@ -18,10 +25,22 @@ services:
       #
       # Authentication is on by default. Only if you really want no login:
       # - AUTH_MODE=none
-      #
+
+      # FlareSolverr (recommended) solves Cloudflare challenges that block some sources.
+      # You need to run FlareSolverr yourself, for example as another service in this file
+      # (image ghcr.io/flaresolverr/flaresolverr); it is not part of tsundoku. Then enable these:
+      # - FLARESOLVERR_ENABLED=true
+      # - FLARESOLVERR_URL=http://flaresolverr:8191
+
+      # The interface. CUSTOM (the default in this image) serves the tsundoku-WebUI that is built into the image:
+      # recommended. WebUI downloads Suwayomi's own WebUI instead, which is not the tsundoku one. Any other
+      # flavor is legacy.
+      # - WEB_UI_FLAVOR=CUSTOM
+
       # Use the built-in PostgreSQL instead of H2 (see the README):
       # - DATABASE_TYPE=POSTGRESQL
       # - USE_EMBEDDED_POSTGRES=true
 
 volumes:
   tsundoku-data:
+  tsundoku-downloads:
