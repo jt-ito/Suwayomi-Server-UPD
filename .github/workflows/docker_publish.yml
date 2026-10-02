@@ -28,7 +28,7 @@ jobs:
     env:
       HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
-      - name: Checkout (full history: the version number is the commit count)
+      - name: "Checkout (full history, the version number is the commit count)"
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
