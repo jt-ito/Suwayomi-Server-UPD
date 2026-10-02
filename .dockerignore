@@ -1,0 +1,14 @@
+# .git stays in: the build derives the version number from the commit count
+**/build
+**/.gradle
+**/node_modules
+.idea
+.vscode
+*.iml
+local.properties
+
+# local tooling and notes
+AGENTS.md
+HANDOFF.md
+skills
+.claude

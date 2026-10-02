@@ -1,0 +1,27 @@
+services:
+  tsundoku:
+    image: ghcr.io/jt-ito/tsundoku:latest
+    # or build it yourself: replace "image" with  build: .
+    container_name: tsundoku
+    restart: unless-stopped
+    ports:
+      - "4567:4567"
+    volumes:
+      - tsundoku-data:/data
+    environment:
+      - TZ=Etc/UTC
+      # Skips the /setup page: the admin account is created from these on first start.
+      # Without them, open the server and follow /setup (from another device it asks for the
+      # setup code printed in `docker logs tsundoku`).
+      # - AUTH_USERNAME=owner
+      # - AUTH_PASSWORD=change-me-please
+      #
+      # Authentication is on by default. Only if you really want no login:
+      # - AUTH_MODE=none
+      #
+      # Use the built-in PostgreSQL instead of H2 (see the README):
+      # - DATABASE_TYPE=POSTGRESQL
+      # - USE_EMBEDDED_POSTGRES=true
+
+volumes:
+  tsundoku-data:
