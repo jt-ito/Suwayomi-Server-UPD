@@ -1,6 +1,6 @@
 services:
   tsundoku:
-    image: ghcr.io/jt-ito/tsundoku:latest
+    image: jteaito/tsundoku:latest   # or ghcr.io/jt-ito/tsundoku:latest
     # or build it yourself: replace "image" with  build: .
     container_name: tsundoku
     restart: unless-stopped

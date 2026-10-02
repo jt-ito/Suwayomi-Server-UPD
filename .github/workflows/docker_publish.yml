@@ -1,11 +1,11 @@
 name: Docker image
 
-# Builds the image from the Dockerfile and pushes it to the GitHub Container Registry
-# (ghcr.io/jt-ito/tsundoku). Pushing needs no secrets: the workflow token is enough.
+# Builds the image from the Dockerfile and pushes it to Docker Hub (jteaito/tsundoku) and to the GitHub
+# Container Registry (ghcr.io/jt-ito/tsundoku).
 #   v* tag       -> :<version>, :<major>.<minor> and :latest
 #   push/manual  -> :edge
-# To publish to Docker Hub as well, add a docker/login-action step with DOCKERHUB_USERNAME and
-# DOCKERHUB_TOKEN secrets and list the Docker Hub image in `images:` of the metadata step.
+# GHCR needs no secrets. Docker Hub is used when the repository has the secrets DOCKERHUB_USERNAME and
+# DOCKERHUB_TOKEN (an access token with write permission); without them only GHCR is published.
 
 on:
   workflow_dispatch:
@@ -25,6 +25,8 @@ jobs:
   docker:
     name: Build and push
     runs-on: ubuntu-latest
+    env:
+      HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - name: Checkout (full history: the version number is the commit count)
         uses: actions/checkout@v7
@@ -33,6 +35,13 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKERHUB == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -45,7 +54,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ env.HAS_DOCKERHUB == 'true' && 'jteaito/tsundoku' || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
