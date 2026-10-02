@@ -12,4 +12,4 @@ mkdir -p "$DATA"
 rm -rf "$DATA/webUI"
 cp -R webUI "$DATA/webUI"
 
-exec ./jre/bin/java -Dsuwayomi.tachidesk.config.server.webUIFlavor=CUSTOM -jar tsundoku.jar "$@"
+exec ./jre/bin/java -Dsuwayomi.tachidesk.config.server.webUIFlavor=CUSTOM -jar bin/tsundoku.jar "$@"

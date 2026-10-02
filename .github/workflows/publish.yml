@@ -168,7 +168,9 @@ jobs:
           mkdir "$dir"
           cp -R jre "$dir/jre"
           cp -R webui "$dir/webUI"
-          cp jar/*.jar "$dir/tsundoku.jar"
+          # the jar lives in bin/, not beside jre/: next to the runtime folder the GraphQL class scan skips it
+          mkdir "$dir/bin"
+          cp jar/*.jar "$dir/bin/tsundoku.jar"
           case "${{ matrix.name }}" in
             windows-x64)
               cp scripts/tsundoku/tsundoku.bat "$dir/tsundoku.bat"
