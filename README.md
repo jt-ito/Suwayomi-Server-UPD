@@ -66,13 +66,39 @@ To build from source you need JDK 21:
 docker run -d --name tsundoku -p 4567:4567 -v tsundoku-data:/data jteaito/tsundoku:latest
 ```
 
-or use [docker-compose.yml](docker-compose.yml). Everything lives in the `/data` volume. The image runs as an unprivileged user (uid 1000 by default; set `PUID` and `PGID` to change it), bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) (refreshed on every start), and is configured with the environment variables [below](#configuration-and-docker-environment-variables). To build it yourself:
+Or use the [docker-compose.yml](docker-compose.yml). Images: `jteaito/tsundoku` on [Docker Hub](https://hub.docker.com/r/jteaito/tsundoku) and `ghcr.io/jt-ito/tsundoku`.
+
+**Volumes**
+
+| Path | What lives there |
+| --- | --- |
+| `/data` | everything the server keeps: database, settings, extensions, backups, logs |
+| `/data/downloads` | downloaded chapters; mount a host folder here to keep them elsewhere |
+
+**Common options** (all environment variables, [full list below](#configuration-and-docker-environment-variables))
+
+| Variable | Purpose |
+| --- | --- |
+| `PUID`, `PGID` | user and group the server runs as (default `1000:1000`), for files on a shared disk |
+| `TZ` | time zone, for example `Europe/Berlin` |
+| `AUTH_USERNAME`, `AUTH_PASSWORD` | create the admin account on first start and skip the `/setup` page |
+| `DATABASE` | `h2` (default), `postgres` (built in) or `external`, see [Database](#database-h2-built-in-postgresql-and-the-migration-page) |
+| `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL` | use a FlareSolverr you run yourself |
+| `KCEF_ENABLED` | `false` turns the WebView off if it does not start on your host |
+
+**Good to know**
+- The image runs as an unprivileged user and hands the two folders above to it on start, so a host folder needs no `chown`.
+- It bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI), refreshed on every start, so updating the image updates the interface.
+
+**Build it yourself**
 
 ```bash
-docker build -t tsundoku .    # needs the .git folder; the WebUI comes from the master branch of tsundoku-WebUI
+docker build -t tsundoku .
 ```
 
-Use `--build-arg WEBUI_REPO=...` and `--build-arg WEBUI_REF=...` to build another WebUI. The image is published to Docker Hub ([`jteaito/tsundoku`](https://hub.docker.com/r/jteaito/tsundoku)) and the GitHub Container Registry (`ghcr.io/jt-ito/tsundoku`) by `.github/workflows/docker_publish.yml` (a `v*` tag gives `:latest` and the version, a push to `master` gives `:edge`). The WebView needs the Chromium libraries the image installs; if it does not start on your host, set `KCEF_ENABLED=false`.
+This needs the `.git` folder (the version number is the commit count). The WebUI comes from the `master` branch of tsundoku-WebUI; use `--build-arg WEBUI_REPO=...` and `--build-arg WEBUI_REF=...` to build another one.
+
+**Publishing** is done by `.github/workflows/docker_publish.yml`: a `v*` tag publishes `:latest` and the version, a push to `master` publishes `:edge`.
 
 ### Data folder
 
@@ -138,20 +164,44 @@ Mihon-compatible backups, plus:
 
 ## Configuration and Docker environment variables
 
-Settings live in `server.conf` in the data folder and in Settings > Server. `-D` overrides (`-Dsuwayomi.tachidesk.config.server.<setting>=...`) still work. For containers, these environment variables set the matching setting and **win over `server.conf`** (empty values are ignored; lists and maps use JSON-style syntax):
+Settings live in `server.conf` in the data folder and in Settings > Server. `-D` overrides (`-Dsuwayomi.tachidesk.config.server.<setting>=...`) still work.
 
-`BIND_IP`, `BIND_PORT`, `SOCKS_PROXY_ENABLED/VERSION/HOST/PORT/USERNAME/PASSWORD`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY`, `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE`, `WEB_UI_ENABLED/FLAVOR/CHANNEL/UPDATE_INTERVAL`, `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL`, `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA/CATEGORIES/CHAPTERS/TRACKING/HISTORY/CLIENT_DATA/SERVER_SETTINGS`, `FLARESOLVERR_ENABLED/URL/TIMEOUT/SESSION_NAME/SESSION_TTL/RESPONSE_AS_FALLBACK`, `DATABASE` (Docker only: `h2`, `postgres` or `external`), `DATABASE_TYPE/URL/USERNAME/PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL`, `KCEF_ENABLED`. `TZ` is read by the JVM.
+For containers, environment variables set the matching setting and **win over `server.conf`**. Empty values are ignored; lists and maps use JSON-style syntax, for example `EXTENSION_STORES=["https://example.com/index.min.json"]`.
+
+| Group | Variables |
+| --- | --- |
+| Network | `BIND_IP`, `BIND_PORT`, `TZ` (read by the JVM) |
+| SOCKS proxy | `SOCKS_PROXY_ENABLED`, `SOCKS_PROXY_VERSION`, `SOCKS_PROXY_HOST`, `SOCKS_PROXY_PORT`, `SOCKS_PROXY_USERNAME`, `SOCKS_PROXY_PASSWORD` |
+| Authentication | `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `JWT_AUDIENCE`, `JWT_TOKEN_EXPIRY`, `JWT_REFRESH_EXPIRY` |
+| Logging | `DEBUG`, `MAX_LOG_FILES`, `MAX_LOG_FILE_SIZE`, `MAX_LOG_FOLDER_SIZE` |
+| Web interface | `WEB_UI_ENABLED`, `WEB_UI_FLAVOR`, `WEB_UI_CHANNEL`, `WEB_UI_UPDATE_INTERVAL` |
+| Downloads and sources | `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL` |
+| Updates and backups | `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA`, `AUTO_BACKUP_INCLUDE_CATEGORIES`, `AUTO_BACKUP_INCLUDE_CHAPTERS`, `AUTO_BACKUP_INCLUDE_TRACKING`, `AUTO_BACKUP_INCLUDE_HISTORY`, `AUTO_BACKUP_INCLUDE_CLIENT_DATA`, `AUTO_BACKUP_INCLUDE_SERVER_SETTINGS` |
+| FlareSolverr | `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `FLARESOLVERR_TIMEOUT`, `FLARESOLVERR_SESSION_NAME`, `FLARESOLVERR_SESSION_TTL`, `FLARESOLVERR_RESPONSE_AS_FALLBACK` |
+| Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
+| WebView | `KCEF_ENABLED` |
+
+A typical setup:
 
 ```yaml
 environment:
-  - AUTH_USERNAME=owner      # optional: skips the /setup page
+  - AUTH_USERNAME=owner            # optional: skips the /setup page
   - AUTH_PASSWORD=change-me-please
-  # - AUTH_MODE=none         # only if you really want no login
+  # - AUTH_MODE=none               # only if you really want no login
 ```
 
-Differences from the old Docker defaults: `AUTH_MODE` defaults to `ui_login`, `JWT_REFRESH_EXPIRY` to `180d`, and the Docker image sets `WEB_UI_FLAVOR=CUSTOM` so it serves its bundled tsundoku-WebUI. Full reference: [docs/Configuring-Suwayomi‐Server.md](docs/Configuring-Suwayomi‐Server.md).
+**Differences from Suwayomi's Docker image**
+- `AUTH_MODE` defaults to `ui_login`.
+- `JWT_REFRESH_EXPIRY` defaults to `180d`.
+- The image sets `WEB_UI_FLAVOR=CUSTOM`, so it serves its bundled tsundoku-WebUI.
 
-Running behind a reverse proxy (any domain works): pass WebSocket upgrades through, send `X-Forwarded-For`/`X-Forwarded-Proto`, terminate HTTPS at the proxy, and keep its access logs private, since the WebUI loads some images with the token in the URL.
+The complete reference is in [docs/Configuring-Suwayomi‐Server.md](docs/Configuring-Suwayomi‐Server.md).
+
+**Behind a reverse proxy** (any domain works):
+- pass WebSocket upgrades through;
+- send `X-Forwarded-For` and `X-Forwarded-Proto`;
+- terminate HTTPS at the proxy;
+- keep its access logs private, since the WebUI loads some images with the token in the URL.
 
 ## Moving over from Suwayomi
 
