@@ -3,13 +3,19 @@ set -e
 
 # Volumes and host folders are often created by root. Start as root only long enough to hand the two mount points to the
 # unprivileged user, then run everything else (including the built-in PostgreSQL, which refuses to run as root) as that user.
+# PUID and PGID (the convention of most self-hosting images, default 1000) pick the user id and group id it runs as,
+# so files on a shared disk keep the owner you want.
 if [ "$(id -u)" = 0 ]; then
-    for dir in /data /data/downloads; do
+    PUID="${PUID:-1000}"
+    PGID="${PGID:-1000}"
+    [ "$PGID" = "$(id -g tsundoku)" ] || groupmod -o -g "$PGID" tsundoku
+    [ "$PUID" = "$(id -u tsundoku)" ] || usermod -o -u "$PUID" tsundoku
+    for dir in /data /data/downloads /home/tsundoku; do
         mkdir -p "$dir"
-        [ "$(stat -c %u "$dir")" = 1000 ] || chown 1000:1000 "$dir"
+        [ "$(stat -c %u:%g "$dir")" = "$PUID:$PGID" ] || chown "$PUID:$PGID" "$dir"
     done
     export HOME=/home/tsundoku
-    exec setpriv --reuid=1000 --regid=1000 --init-groups "$0" "$@"
+    exec setpriv --reuid="$PUID" --regid="$PGID" --init-groups "$0" "$@"
 fi
 
 # The WebUI that was built into the image replaces the copy in the data volume on every start, so an image update

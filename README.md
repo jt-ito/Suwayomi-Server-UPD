@@ -66,7 +66,7 @@ To build from source you need JDK 21:
 docker run -d --name tsundoku -p 4567:4567 -v tsundoku-data:/data jteaito/tsundoku:latest
 ```
 
-or use [docker-compose.yml](docker-compose.yml). Everything lives in the `/data` volume. The image runs as an unprivileged user (uid 1000), bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) (refreshed on every start), and is configured with the environment variables [below](#configuration-and-docker-environment-variables). To build it yourself:
+or use [docker-compose.yml](docker-compose.yml). Everything lives in the `/data` volume. The image runs as an unprivileged user (uid 1000 by default; set `PUID` and `PGID` to change it), bundles [tsundoku-WebUI](https://github.com/jt-ito/tsundoku-WebUI) (refreshed on every start), and is configured with the environment variables [below](#configuration-and-docker-environment-variables). To build it yourself:
 
 ```bash
 docker build -t tsundoku .    # needs the .git folder; the WebUI comes from the fork-customizations branch of tsundoku-WebUI

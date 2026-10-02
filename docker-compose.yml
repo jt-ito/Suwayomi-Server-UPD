@@ -16,6 +16,9 @@ services:
       - ${DOWNLOADS_PATH:-tsundoku-downloads}:/data/downloads
     environment:
       - TZ=Etc/UTC
+      # The user and group the server runs as (default 1000:1000), for files on a shared disk:
+      # - PUID=1000
+      # - PGID=1000
 
       # Skips the /setup page: the admin account is created from these on first start.
       # Without them, open the server and follow /setup (from another device it asks for the
