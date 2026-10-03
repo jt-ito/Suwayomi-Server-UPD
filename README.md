@@ -35,7 +35,9 @@ A self-hosted manga reader server that runs [Mihon (Tachiyomi)](https://mihon.ap
 
 ### Accounts
 - Admins and members, created and managed from the WebUI (profile card in the sidebar).
-- Library entries, categories, read progress and tracker bindings are per account. Existing single-user data moves to the first admin automatically.
+- Library entries, categories, read progress, tracker bindings and tracker logins (AniList, MAL, ...) are per account, and so are the WebUI settings (theme, library layout, ...), the per-manga reader settings and the source settings (pinned sources, saved searches). A new account starts completely empty. Existing single-user data moves to the first admin automatically, so updating the server or the Docker image loses nothing.
+- A backup holds the data of the account that creates it, and a restore only writes into the account that runs it, so restoring an official Suwayomi backup as one account never touches another. Server settings and extensions belong to the whole server and are only part of an admin's backups and restores. The automatic backups (and sync) belong to the first account.
+- Admins can also create a **server backup** (Backup page, a `.zip`): one backup per account, the server settings and extensions, and the accounts themselves. Restoring it brings every account back and recreates the missing ones with their original logins, existing accounts keep their password. The file contains the password hashes, so keep it private.
 - A user's role and existence are read from the database on every token check and refresh, so demoting or deleting an account takes effect immediately rather than when the token expires.
 
 ## Getting started
