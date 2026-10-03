@@ -137,6 +137,9 @@ The default is the embedded **H2** file database, as in Suwayomi. tsundoku can a
 - **Automatic major-version upgrades.** When a new server release bundles a newer PostgreSQL, the old data is upgraded in a staging copy and a backup is kept. If anything fails, the original data is left untouched.
 - **Migration page.** Open `/database` (also linked from Settings > Server > Database). It shows which engine is active and walks you through switching **from H2 to PostgreSQL and back**, with a confirmation dialog and an automatic backup first.
 - **External PostgreSQL** works as before: set `DATABASE_TYPE=POSTGRESQL` and the `DATABASE_*` variables.
+> [!WARNING]
+> **Choose the built-in PostgreSQL on a new data folder.** It starts empty. Switching an existing H2 library over with `DATABASE=postgres` (or `DATABASE_TYPE=POSTGRESQL` with `USE_EMBEDDED_POSTGRES=true`) would show an empty library, so the Docker image **refuses to start** in that case and says so. Your H2 file is never deleted. To move an existing library, start on H2, open `/database` and migrate there. `DATABASE_ALLOW_EMPTY=true` starts an empty PostgreSQL anyway.
+
 - **Choosing the engine in Docker.** `DATABASE=h2` (the default), `DATABASE=postgres` (the built-in PostgreSQL) or `DATABASE=external` picks the engine from the first start, so a new install never has to be migrated. It only fills in `DATABASE_TYPE` and `USE_EMBEDDED_POSTGRES` when you have not set them. Changing it later does not move data: if the volume already holds a library in the other engine the container prints a warning (the new engine would start empty), and the migration page moves the data.
 
 PostgreSQL is a good choice for larger libraries. H2 is simpler and fine for a personal library.
@@ -178,7 +181,7 @@ For containers, environment variables set the matching setting and **win over `s
 | Downloads and sources | `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL` |
 | Updates and backups | `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA`, `AUTO_BACKUP_INCLUDE_CATEGORIES`, `AUTO_BACKUP_INCLUDE_CHAPTERS`, `AUTO_BACKUP_INCLUDE_TRACKING`, `AUTO_BACKUP_INCLUDE_HISTORY`, `AUTO_BACKUP_INCLUDE_CLIENT_DATA`, `AUTO_BACKUP_INCLUDE_SERVER_SETTINGS` |
 | FlareSolverr | `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `FLARESOLVERR_TIMEOUT`, `FLARESOLVERR_SESSION_NAME`, `FLARESOLVERR_SESSION_TTL`, `FLARESOLVERR_RESPONSE_AS_FALLBACK` |
-| Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
+| Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_ALLOW_EMPTY` (Docker only), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
 | WebView | `KCEF_ENABLED` |
 
 > [!NOTE]
@@ -206,7 +209,8 @@ services:
       - AUTH_USERNAME=owner
       - AUTH_PASSWORD=change-me-please           # at least 8 characters
       # Database: the PostgreSQL that is built into the image, used from the very first start.
-      # DATABASE=postgres is the short form of these two lines.
+      # Only for a NEW data folder: on a folder that already holds an H2 library the container refuses to start
+      # (migrate that one on the /database page instead). DATABASE=postgres is the short form of these two lines.
       - DATABASE_TYPE=POSTGRESQL
       - USE_EMBEDDED_POSTGRES=true
       # FlareSolverr: a separate service you run yourself
@@ -238,7 +242,7 @@ The complete reference is in [docs/Configuring-Suwayomi‐Server.md](docs/Config
 
 1. In Suwayomi, create a backup (Settings > Backup).
 2. Start tsundoku with its **own new, empty data folder** (the [compose example](#configuration-and-docker-environment-variables) above). Do not point it at Suwayomi's folders.
-3. Create the admin account with `AUTH_USERNAME` and `AUTH_PASSWORD`, or on the `/setup` page.
+3. Create the admin account with `AUTH_USERNAME` and `AUTH_PASSWORD`, or on the `/setup` page. A new folder is also the moment to choose the built-in PostgreSQL (`DATABASE=postgres`) if you want it; it cannot be added to an existing H2 folder this way.
 4. In tsundoku, open Settings > Backup and restore the file. Your library, categories, chapters, reading progress and trackers come back, and missing extensions are installed during the restore.
 
 This leaves your Suwayomi folder untouched, so you can always go back. There is no database upgrade to undo, and none of Suwayomi's old settings are carried over. Suwayomi's own backups can be restored here, and tsundoku's backups can be restored there.
@@ -260,7 +264,7 @@ Switching only the image is **not enough**. These settings of your existing comp
 | Volume order | downloads **first** | does not matter |
 | `WEBUI_FLAVOR` | sometimes set | remove it; the image serves the tsundoku-WebUI by itself |
 
-Keep the same host folders on the left of each volume line, so your library and downloads are picked up. Everything else carries over: `TZ`, `PUID`, `PGID`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `network_mode`, `depends_on` and the other variables work with the same names.
+Keep the same host folders on the left of each volume line, so your library and downloads are picked up. Stay on H2 for now: do not add `DATABASE=postgres` (or the two PostgreSQL variables) to this folder, the container would refuse to start. To switch to PostgreSQL later, open `/database` and migrate. Everything else carries over: `TZ`, `PUID`, `PGID`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `network_mode`, `depends_on` and the other variables work with the same names.
 
 ```yaml
 services:

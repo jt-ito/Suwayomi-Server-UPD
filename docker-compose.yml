@@ -44,7 +44,8 @@ services:
       # flavor is legacy.
       # - WEB_UI_FLAVOR=CUSTOM
 
-      # The database, chosen from the very first start so nothing has to be migrated later:
+      # The database, chosen from the very first start so nothing has to be migrated later. Only for a NEW data
+      # folder: if it already holds an H2 library the container refuses to start (use /database to migrate it).
       #   h2 (the default), postgres (the PostgreSQL built into the image, kept in /data/postgres-data)
       #   or external (your own PostgreSQL: also set DATABASE_URL, DATABASE_USERNAME and DATABASE_PASSWORD).
       # - DATABASE=postgres
