@@ -39,5 +39,12 @@ data class Backup(
 
             return getBasename(name + "_$date") + ext
         }
+
+        /** The file of a backup of the whole server, see ServerBackup. */
+        fun getServerFilename(): String {
+            val date = SimpleDateFormat("yyyy-MM-dd_HH-mm").format(Date())
+
+            return "tsundoku-server-backup_$date.zip"
+        }
     }
 }

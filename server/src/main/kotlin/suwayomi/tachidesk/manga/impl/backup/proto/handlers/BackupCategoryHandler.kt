@@ -8,6 +8,7 @@ package suwayomi.tachidesk.manga.impl.backup.proto.handlers
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -19,14 +20,21 @@ import suwayomi.tachidesk.manga.impl.backup.BackupFlags
 import suwayomi.tachidesk.manga.impl.backup.proto.SyncRestoreMode
 import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupCategory
 import suwayomi.tachidesk.manga.model.table.CategoryTable
+import suwayomi.tachidesk.manga.model.table.ownedBy
+import suwayomi.tachidesk.manga.model.table.toDataClass
+import suwayomi.tachidesk.server.user.model.UserTable
 import suwayomi.tachidesk.server.database.dbTransaction
 
 object BackupCategoryHandler {
-    fun backup(flags: BackupFlags): List<BackupCategory> =
+    fun backup(
+        flags: BackupFlags,
+        userId: Int = 1,
+    ): List<BackupCategory> =
         dbTransaction {
             val categories =
                 CategoryTable
                     .selectAll()
+                    .where { CategoryTable.ownedBy(userId) }
                     .orderBy(CategoryTable.order to SortOrder.ASC)
                     .toList()
 
@@ -54,8 +62,17 @@ object BackupCategoryHandler {
     fun restore(
         backupCategories: List<BackupCategory>,
         syncMode: SyncRestoreMode = SyncRestoreMode.NONE,
+        userId: Int = 1,
     ): Map<Int, Int> {
-        val dbCategories = Category.getCategoryList()
+        // only the categories of this account take part, the other accounts' categories are none of its business
+        val dbCategories =
+            transaction {
+                CategoryTable
+                    .selectAll()
+                    .where { CategoryTable.ownedBy(userId) }
+                    .orderBy(CategoryTable.order to SortOrder.ASC)
+                    .map { CategoryTable.toDataClass(it) }
+            }
         val dbCategoriesByName = dbCategories.associateBy { it.name }
         val dbCategoriesByUid = dbCategories.associateBy { it.uid }
 
@@ -114,6 +131,7 @@ object BackupCategoryHandler {
                                 it[uid] = backupCategory.uid
                                 it[lastModifiedAt] = backupCategory.lastModifiedAt
                                 it[flags] = backupCategory.flags
+                                it[user] = EntityID(userId, UserTable)
                             }.value
                     }
             }

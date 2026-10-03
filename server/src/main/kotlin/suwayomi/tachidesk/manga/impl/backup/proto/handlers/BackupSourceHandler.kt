@@ -21,6 +21,7 @@ object BackupSourceHandler {
     fun backup(
         backupMangas: List<BackupManga>,
         flags: BackupFlags,
+        userId: Int = 1,
     ): List<BackupSource> =
         dbTransaction {
             val inLibraryMangaSourceIds =
@@ -32,7 +33,7 @@ object BackupSourceHandler {
             val sources = SourceTable.selectAll().where { SourceTable.id inList inLibraryMangaSourceIds }
             val sourceToMeta =
                 if (flags.includeClientData) {
-                    Source.getSourcesMetaMaps(sources.map { it[SourceTable.id].value })
+                    Source.getSourcesMetaMaps(sources.map { it[SourceTable.id].value }, userId)
                 } else {
                     emptyMap()
                 }
@@ -51,7 +52,10 @@ object BackupSourceHandler {
                 }.toList()
         }
 
-    fun restore(backupSources: List<BackupSource>) {
-        modifySourceMetas(backupSources.associateBy { it.sourceId }.mapValues { it.value.meta })
+    fun restore(
+        backupSources: List<BackupSource>,
+        userId: Int = 1,
+    ) {
+        modifySourceMetas(backupSources.associateBy { it.sourceId }.mapValues { it.value.meta }, userId)
     }
 }

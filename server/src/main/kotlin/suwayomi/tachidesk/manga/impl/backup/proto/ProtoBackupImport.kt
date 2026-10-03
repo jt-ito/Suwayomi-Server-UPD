@@ -40,6 +40,7 @@ import suwayomi.tachidesk.manga.impl.extension.ExtensionsList
 import suwayomi.tachidesk.manga.model.table.CategoryTable
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
+import suwayomi.tachidesk.server.user.UserManager
 import java.io.InputStream
 import java.util.Date
 import java.util.Timer
@@ -114,22 +115,104 @@ object ProtoBackupImport : ProtoBackupBase() {
         )
     }
 
+    /**
+     * A restore writes into one account ([userId]). The server settings and extensions belong to the whole server,
+     * so they are only restored when the account may manage the server ([canManageServer]).
+     */
     fun restore(
         sourceStream: InputStream,
         flags: BackupFlags,
         syncMode: SyncRestoreMode = SyncRestoreMode.NONE,
-    ): String = queueRestore(flags, syncMode) { decode(sourceStream, syncMode) }
+        userId: Int = 1,
+        canManageServer: Boolean = true,
+    ): String = queueRestore(flags, syncMode, userId, canManageServer) { decode(sourceStream, syncMode) }
 
     fun restore(
         backup: Backup,
         flags: BackupFlags,
         syncMode: SyncRestoreMode = SyncRestoreMode.NONE,
-    ): String = queueRestore(flags, syncMode) { backup }
+        userId: Int = 1,
+        canManageServer: Boolean = true,
+    ): String = queueRestore(flags, syncMode, userId, canManageServer) { backup }
+
+    /**
+     * Restores a backup of the whole server ([ServerBackup]): the server settings and extensions, and every account in it.
+     * Accounts that don't exist yet are created with their stored login, existing ones keep their password.
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    fun restoreServer(
+        sourceStream: InputStream,
+        flags: BackupFlags,
+    ): String {
+        val restoreId = System.currentTimeMillis().toString()
+
+        logger.info { "restore($restoreId): queued (whole server)" }
+
+        updateRestoreState(restoreId, BackupRestoreState.Idle)
+
+        GlobalScope.launch {
+            backupMutex.withLock {
+                try {
+                    logger.info { "restore($restoreId): restoring the whole server..." }
+                    val parsed = ServerBackup.read(sourceStream)
+
+                    parsed.server?.let {
+                        performRestore(
+                            restoreId,
+                            decode(it.inputStream(), SyncRestoreMode.NONE),
+                            ServerBackup.serverPartFlags(flags),
+                            SyncRestoreMode.NONE,
+                            1,
+                            true,
+                            markFinished = false,
+                        )
+                    }
+
+                    parsed.accounts.forEach { part ->
+                        val account = part.account
+                        val userId =
+                            UserManager.findOrCreateForRestore(
+                                account.username,
+                                account.passwordHash,
+                                account.salt,
+                                account.role,
+                                account.createdAt,
+                            )
+                        logger.info { "restore($restoreId): restoring the account \"${account.username}\"" }
+                        performRestore(
+                            restoreId,
+                            decode(part.backup.inputStream(), SyncRestoreMode.NONE),
+                            ServerBackup.accountPartFlags(flags),
+                            SyncRestoreMode.NONE,
+                            userId,
+                            true,
+                            markFinished = false,
+                        )
+                    }
+
+                    updateRestoreState(restoreId, BackupRestoreState.Success)
+                } catch (e: Exception) {
+                    logger.error(e) { "restore($restoreId): failed due to" }
+                    updateRestoreState(restoreId, BackupRestoreState.Failure)
+                } catch (e: OutOfMemoryError) {
+                    logger.error { "restore($restoreId): out of memory" }
+                    updateRestoreState(restoreId, BackupRestoreState.Failure)
+                } finally {
+                    logger.info { "restore($restoreId): finished with state ${getRestoreState(restoreId)?.toStatus()?.state}" }
+                    cleanupRestoreState(restoreId)
+                }
+            }
+        }
+
+        return restoreId
+    }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun queueRestore(
         flags: BackupFlags,
         syncMode: SyncRestoreMode,
+        userId: Int,
+        canManageServer: Boolean,
         load: () -> Backup,
     ): String {
         val restoreId = System.currentTimeMillis().toString()
@@ -139,7 +222,7 @@ object ProtoBackupImport : ProtoBackupBase() {
         updateRestoreState(restoreId, BackupRestoreState.Idle)
 
         GlobalScope.launch {
-            runRestore(restoreId, flags, syncMode, load)
+            runRestore(restoreId, flags, syncMode, userId, canManageServer, load)
         }
 
         return restoreId
@@ -150,18 +233,22 @@ object ProtoBackupImport : ProtoBackupBase() {
         restoreId: String = "legacy",
         flags: BackupFlags = BackupFlags.DEFAULT,
         syncMode: SyncRestoreMode = SyncRestoreMode.NONE,
-    ): ValidationResult = runRestore(restoreId, flags, syncMode) { decode(sourceStream, syncMode) }
+        userId: Int = 1,
+        canManageServer: Boolean = true,
+    ): ValidationResult = runRestore(restoreId, flags, syncMode, userId, canManageServer) { decode(sourceStream, syncMode) }
 
     private suspend fun runRestore(
         restoreId: String,
         flags: BackupFlags,
         syncMode: SyncRestoreMode,
+        userId: Int,
+        canManageServer: Boolean,
         load: () -> Backup,
     ): ValidationResult =
         backupMutex.withLock {
             try {
                 logger.info { "restore($restoreId): restoring..." }
-                performRestore(restoreId, load(), flags, syncMode)
+                performRestore(restoreId, load(), flags, syncMode, userId, canManageServer)
             } catch (e: Exception) {
                 logger.error(e) { "restore($restoreId): failed due to" }
 
@@ -246,9 +333,20 @@ object ProtoBackupImport : ProtoBackupBase() {
     private suspend fun performRestore(
         id: String,
         backup: Backup,
-        flags: BackupFlags,
+        requestedFlags: BackupFlags,
         syncMode: SyncRestoreMode,
+        userId: Int,
+        canManageServer: Boolean,
+        markFinished: Boolean = true,
     ): ValidationResult {
+        // the server settings and the extensions are not part of an account
+        val flags =
+            if (canManageServer) {
+                requestedFlags
+            } else {
+                requestedFlags.copy(includeServerSettings = false, includeExtensions = false)
+            }
+
         // the stores come first: the extensions can only be installed from a store that is configured
         if (flags.includeExtensions) {
             BackupExtensionHandler.restore(
@@ -258,7 +356,9 @@ object ProtoBackupImport : ProtoBackupBase() {
         }
 
         // checked after the extensions are installed, so only sources that are really still missing are reported
-        installMissingExtensions(validate(backup).missingSourceIds)
+        if (canManageServer) {
+            installMissingExtensions(validate(backup).missingSourceIds)
+        }
         val validationResult = validate(backup)
 
         val restoreCategories = if (flags.includeCategories) 1 else 0
@@ -279,7 +379,7 @@ object ProtoBackupImport : ProtoBackupBase() {
         val categoryMapping =
             if (flags.includeCategories) {
                 updateRestoreState(id, BackupRestoreState.RestoringCategories(restoreSettings + restoreCategories, restoreAmount))
-                BackupCategoryHandler.restore(backup.backupCategories, syncMode)
+                BackupCategoryHandler.restore(backup.backupCategories, syncMode, userId)
             } else {
                 emptyMap()
             }
@@ -287,9 +387,9 @@ object ProtoBackupImport : ProtoBackupBase() {
         if (flags.includeClientData) {
             updateRestoreState(id, BackupRestoreState.RestoringMeta(restoreSettings + restoreCategories + restoreMeta, restoreAmount))
 
-            BackupGlobalMetaHandler.restore(backup.meta)
+            BackupGlobalMetaHandler.restore(backup.meta, userId)
 
-            BackupSourceHandler.restore(backup.backupSources)
+            BackupSourceHandler.restore(backup.backupSources, userId)
         }
 
         // Store source mapping for error messages
@@ -316,6 +416,7 @@ object ProtoBackupImport : ProtoBackupBase() {
                     errors = errors,
                     flags = flags,
                     syncMode = syncMode,
+                    userId = userId,
                 )
             }
         }
@@ -334,7 +435,9 @@ object ProtoBackupImport : ProtoBackupBase() {
             """.trimIndent()
         }
 
-        updateRestoreState(id, BackupRestoreState.Success)
+        if (markFinished) {
+            updateRestoreState(id, BackupRestoreState.Success)
+        }
 
         return validationResult
     }

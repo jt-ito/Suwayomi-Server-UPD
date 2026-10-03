@@ -7,9 +7,14 @@ package suwayomi.tachidesk.manga.model.table
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.eq
 import suwayomi.tachidesk.manga.model.dataclass.CategoryDataClass
 import suwayomi.tachidesk.manga.model.dataclass.IncludeOrExclude
 import suwayomi.tachidesk.server.user.model.UserTable
@@ -45,3 +50,11 @@ fun CategoryTable.toDataClass(categoryEntry: ResultRow) =
         lastModifiedAt = categoryEntry[lastModifiedAt],
         userId = categoryEntry[user]?.value,
     )
+
+/** The categories of one account. Categories from before they had an owner belong to the first account. */
+fun CategoryTable.ownedBy(userId: Int): Op<Boolean> =
+    if (userId == 1) {
+        (user eq EntityID(1, UserTable)) or user.isNull()
+    } else {
+        user eq EntityID(userId, UserTable)
+    }

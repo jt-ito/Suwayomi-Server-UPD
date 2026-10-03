@@ -147,19 +147,34 @@ object ProtoBackupExport : ProtoBackupBase() {
         }
     }
 
-    fun createBackup(flags: BackupFlags): InputStream {
+    /** A backup of every account and of the server itself, see [ServerBackup]. Only for admins. */
+    fun createServerBackup(flags: BackupFlags): InputStream =
+        ServerBackup.create(flags) { partFlags, userId, canManageServer -> createBackup(partFlags, userId, canManageServer) }
+
+    /**
+     * A backup holds the data of one account: its library, categories, progress, trackers and settings. The server
+     * settings and extensions belong to the whole server, so only an admin ([canManageServer]) gets them in.
+     */
+    fun createBackup(
+        flags: BackupFlags,
+        userId: Int = 1,
+        canManageServer: Boolean = true,
+    ): InputStream {
+        val actualFlags =
+            if (canManageServer) flags else flags.copy(includeServerSettings = false, includeExtensions = false)
+
         // Create root object
         val backup: Backup =
             transaction {
-                val backupMangas = BackupMangaHandler.backup(flags)
+                val backupMangas = BackupMangaHandler.backup(actualFlags, userId = userId)
                 Backup(
                     backupMangas,
-                    BackupCategoryHandler.backup(flags),
-                    BackupSourceHandler.backup(backupMangas, flags),
-                    BackupGlobalMetaHandler.backup(flags),
-                    BackupSettingsHandler.backup(flags),
-                    extensionStores = if (flags.includeExtensions) BackupExtensionHandler.backupStores() else emptyList(),
-                    backupExtensions = if (flags.includeExtensions) BackupExtensionHandler.backup() else emptyList(),
+                    BackupCategoryHandler.backup(actualFlags, userId),
+                    BackupSourceHandler.backup(backupMangas, actualFlags, userId),
+                    BackupGlobalMetaHandler.backup(actualFlags, userId),
+                    BackupSettingsHandler.backup(actualFlags),
+                    extensionStores = if (actualFlags.includeExtensions) BackupExtensionHandler.backupStores() else emptyList(),
+                    backupExtensions = if (actualFlags.includeExtensions) BackupExtensionHandler.backup() else emptyList(),
                 )
             }
 
