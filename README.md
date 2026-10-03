@@ -184,7 +184,7 @@ For containers, environment variables set the matching setting and **win over `s
 > [!NOTE]
 > Coming from Suwayomi's Docker image? The image, the volumes and a few variables have to change, see [Moving over from Suwayomi](#moving-over-from-suwayomi).
 
-A complete setup with a login, FlareSolverr and the built-in PostgreSQL (`docker-compose.yml`):
+A complete setup with a login, FlareSolverr (which you run yourself) and the built-in PostgreSQL:
 
 ```yaml
 services:
@@ -201,31 +201,17 @@ services:
       - TZ=Etc/UTC
       - PUID=1000                                # the user and group the server runs as
       - PGID=1000
-
       # Login: the admin account is created from these on first start, so there is no /setup page.
       - AUTH_MODE=ui_login                       # none | basic_auth | simple_login | ui_login
       - AUTH_USERNAME=owner
       - AUTH_PASSWORD=change-me-please           # at least 8 characters
-
       # Database: the PostgreSQL that is built into the image, used from the very first start.
       # DATABASE=postgres is the short form of these two lines.
       - DATABASE_TYPE=POSTGRESQL
       - USE_EMBEDDED_POSTGRES=true
-
-      # FlareSolverr, the service below
+      # FlareSolverr: a separate service you run yourself
       - FLARESOLVERR_ENABLED=true
       - FLARESOLVERR_URL=http://flaresolverr:8191
-    depends_on:
-      - flaresolverr
-
-  flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
-    restart: unless-stopped
-    environment:
-      - TZ=Etc/UTC
-      - LOG_LEVEL=info
-
 volumes:
   tsundoku-data:
   tsundoku-downloads:
@@ -248,12 +234,21 @@ The complete reference is in [docs/Configuring-Suwayomi‐Server.md](docs/Config
 
 ## Moving over from Suwayomi
 
-You can reuse your existing data folder or restore a Suwayomi backup. Suwayomi's own backups can be restored here, and tsundoku's can be restored there. Existing single-user data becomes the first admin's, and the extensions, sources and trackers are the same.
+### Recommended: start fresh and import a backup
+
+1. In Suwayomi, create a backup (Settings > Backup).
+2. Start tsundoku with its **own new, empty data folder** (the [compose example](#configuration-and-docker-environment-variables) above). Do not point it at Suwayomi's folders.
+3. Create the admin account with `AUTH_USERNAME` and `AUTH_PASSWORD`, or on the `/setup` page.
+4. In tsundoku, open Settings > Backup and restore the file. Your library, categories, chapters, reading progress and trackers come back, and missing extensions are installed during the restore.
+
+This leaves your Suwayomi folder untouched, so you can always go back. There is no database upgrade to undo, and none of Suwayomi's old settings are carried over. Suwayomi's own backups can be restored here, and tsundoku's backups can be restored there.
+
+### Or keep using the existing data folder
+
+This also works and keeps everything as it is, but the first start upgrades the database for accounts, which cannot be undone.
 
 > [!IMPORTANT]
-> **Back up your data folder before the first start.** The first start upgrades the database for accounts, and that cannot be undone.
-
-### Coming from Suwayomi's Docker image
+> **Back up your data folder before the first start.**
 
 Switching only the image is **not enough**. These settings of your existing compose file have to change:
 
@@ -270,12 +265,12 @@ Keep the same host folders on the left of each volume line, so your library and 
 ```yaml
 services:
   tsundoku:
-    image: jteaito/tsundoku:latest                                 # was the Suwayomi image
+    image: jteaito/tsundoku:latest                  # was the Suwayomi image
     volumes:
-      - /your/downloads:/data/downloads                             # was .../Tachidesk/downloads
-      - /your/suwayomi/data:/data                                   # was .../.local/share/Tachidesk
+      - /your/downloads:/data/downloads             # was .../Tachidesk/downloads
+      - /your/suwayomi/data:/data                   # was .../.local/share/Tachidesk
     environment:
-      - AUTH_USERNAME=owner                                         # at least 8 characters for the password
+      - AUTH_USERNAME=owner                         # at least 8 characters for the password
       - AUTH_PASSWORD=change-me-please
 ```
 
@@ -283,7 +278,7 @@ After the first start check `docker logs`: it should say that the admin account 
 
 ### Coming from a bare install
 
-Point tsundoku at the same data folder (it is the same location, see [Data folder](#data-folder)) or restore a backup into a fresh install. Set `AUTH_USERNAME` and `AUTH_PASSWORD`, or use `/setup`, before you expose the server.
+Restore a backup into a fresh install (recommended), or point tsundoku at the same data folder (it is the same location, see [Data folder](#data-folder)). Set `AUTH_USERNAME` and `AUTH_PASSWORD`, or use `/setup`, before you expose the server.
 
 ## Development
 
