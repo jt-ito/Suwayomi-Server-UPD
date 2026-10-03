@@ -164,6 +164,8 @@ class ServerConfig(
         group = SettingGroup.WEB_UI,
         privacySafe = true,
         defaultValue = WebUIFlavor.WEBUI,
+        // a backup (a Suwayomi one says WEBUI) must not switch the interface of this server
+        excludeFromBackup = true,
         enumClass = WebUIFlavor::class,
         typeInfo = SettingsRegistry.PartialTypeInfo(imports = listOf("suwayomi.tachidesk.graphql.types.WebUIFlavor")),
     )
@@ -199,6 +201,8 @@ class ServerConfig(
         group = SettingGroup.WEB_UI,
         privacySafe = true,
         defaultValue = WebUIChannel.STABLE,
+        // same as the flavor
+        excludeFromBackup = true,
         enumClass = WebUIChannel::class,
         typeInfo = SettingsRegistry.PartialTypeInfo(imports = listOf("suwayomi.tachidesk.graphql.types.WebUIChannel")),
     )
@@ -707,6 +711,8 @@ class ServerConfig(
         group = SettingGroup.AUTH,
         privacySafe = true,
         defaultValue = "suwayomi-server-api",
+        // restoring a different audience would invalidate every login token
+        excludeFromBackup = true,
     )
 
     @Deprecated("Moved to preference store. User is supposed to use a login/logout mutation")
@@ -895,6 +901,8 @@ class ServerConfig(
         group = SettingGroup.WEB_UI,
         privacySafe = true,
         defaultValue = true,
+        // a backup that says false would leave this server without an interface after the next start
+        excludeFromBackup = true,
         requiresRestart = true,
     )
 
