@@ -5,6 +5,7 @@ import android.content.Context
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
+import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.exceptions.JWTVerificationException
 import com.auth0.jwt.exceptions.TokenExpiredException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -126,6 +127,11 @@ object Jwt {
             // Expected whenever a client uses an access token that expired since its last refresh. The client refreshes
             // the token and retries, so this is not worth a warning with a stack trace.
             logger.debug { "Received expired token: ${e.message}" }
+            return UserType.Visitor
+        } catch (e: JWTDecodeException) {
+            // Not a token at all, for example the "Sec-WebSocket-Protocol" value that a WebSocket connection sends
+            // ("graphql-transport-ws"): not worth a warning with a stack trace on every connection.
+            logger.debug { "Received something that is not a token: ${e.message}" }
             return UserType.Visitor
         } catch (e: JWTVerificationException) {
             logger.warn(e) { "Received invalid token" }
