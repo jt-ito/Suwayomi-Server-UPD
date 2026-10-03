@@ -12,7 +12,8 @@ import java.io.IOException
 
 class Bangumi(
     id: Int,
-) : Tracker(id, "Bangumi") {
+    userId: Int = 1,
+) : Tracker(id, "Bangumi", userId) {
     companion object {
         const val PLAN_TO_READ = 1
         const val COMPLETED = 2

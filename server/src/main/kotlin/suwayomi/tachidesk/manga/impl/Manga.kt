@@ -289,11 +289,14 @@ object Manga {
         }
     }
 
-    fun getMangaMetaMap(mangaId: Int): Map<String, String> =
+    fun getMangaMetaMap(
+        mangaId: Int,
+        userId: Int = 1,
+    ): Map<String, String> =
         transaction {
             MangaMetaTable
                 .selectAll()
-                .where { MangaMetaTable.ref eq mangaId }
+                .where { (MangaMetaTable.ref eq mangaId) and (MangaMetaTable.user eq userId) }
                 .associate { it[MangaMetaTable.key] to it[MangaMetaTable.value] }
         }
 
@@ -301,11 +304,15 @@ object Manga {
         mangaId: Int,
         key: String,
         value: String,
+        userId: Int = 1,
     ) {
-        modifyMangasMetas(mapOf(mangaId to mapOf(key to value)))
+        modifyMangasMetas(mapOf(mangaId to mapOf(key to value)), userId)
     }
 
-    fun modifyMangasMetas(metaByMangaId: Map<Int, Map<String, String>>) {
+    fun modifyMangasMetas(
+        metaByMangaId: Map<Int, Map<String, String>>,
+        userId: Int = 1,
+    ) {
         transaction {
             val mangaIds = metaByMangaId.keys
             val metaKeys = metaByMangaId.flatMap { it.value.keys }
@@ -313,7 +320,9 @@ object Manga {
             val dbMetaByMangaId =
                 MangaMetaTable
                     .selectAll()
-                    .where { (MangaMetaTable.ref inList mangaIds) and (MangaMetaTable.key inList metaKeys) }
+                    .where {
+                        (MangaMetaTable.ref inList mangaIds) and (MangaMetaTable.key inList metaKeys) and (MangaMetaTable.user eq userId)
+                    }
                     .groupBy { it[MangaMetaTable.ref].value }
 
             val existingMetaByMetaId =
@@ -351,6 +360,7 @@ object Manga {
 
             if (newMetaByMangaId.isNotEmpty()) {
                 MangaMetaTable.batchInsert(newMetaByMangaId) { (mangaId, entry) ->
+                    this[MangaMetaTable.user] = userId
                     this[MangaMetaTable.ref] = EntityID(mangaId, MangaTable)
                     this[MangaMetaTable.key] = entry.key
                     this[MangaMetaTable.value] = entry.value

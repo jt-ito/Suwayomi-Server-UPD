@@ -13,6 +13,7 @@ import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -25,6 +26,7 @@ import suwayomi.tachidesk.graphql.queries.filter.OpAnd
 import suwayomi.tachidesk.graphql.queries.filter.StringFilter
 import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompareString
 import suwayomi.tachidesk.graphql.queries.filter.applyOps
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.Order
 import suwayomi.tachidesk.graphql.server.primitives.OrderBy
@@ -108,6 +110,7 @@ class MetaQuery {
 
     @RequireAuth
     fun metas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: MetaCondition? = null,
         filter: MetaFilter? = null,
         @GraphQLDeprecated(
@@ -127,9 +130,10 @@ class MetaQuery {
         last: Int? = null,
         offset: Int? = null,
     ): GlobalMetaNodeList {
+        val userId = dataFetchingEnvironment.currentUserId()
         val queryResults =
             transaction {
-                val res = GlobalMetaTable.selectAll()
+                val res = GlobalMetaTable.selectAll().where { GlobalMetaTable.user eq userId }
 
                 res.applyOps(condition, filter)
 

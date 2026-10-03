@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import suwayomi.tachidesk.global.impl.sync.SyncYomiSyncService
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.directives.RequireAuth
 import suwayomi.tachidesk.graphql.server.getAttribute
 import suwayomi.tachidesk.graphql.types.CategoryMetaType
@@ -529,14 +530,18 @@ class CategoryMutation {
     }
 
     @RequireAuth
-    fun updateMangaCategories(input: UpdateMangaCategoriesInput): UpdateMangaCategoriesPayload? {
+    fun updateMangaCategories(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateMangaCategoriesInput,
+    ): UpdateMangaCategoriesPayload? {
         val (clientMutationId, id, patch) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         updateMangas(listOf(id), patch)
 
         val manga =
             transaction {
-                MangaType(MangaTable.selectAll().where { MangaTable.id eq id }.first())
+                MangaType(MangaTable.selectAll().where { MangaTable.id eq id }.first(), userId)
             }
 
         return UpdateMangaCategoriesPayload(
@@ -546,14 +551,18 @@ class CategoryMutation {
     }
 
     @RequireAuth
-    fun updateMangasCategories(input: UpdateMangasCategoriesInput): UpdateMangasCategoriesPayload? {
+    fun updateMangasCategories(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: UpdateMangasCategoriesInput,
+    ): UpdateMangasCategoriesPayload? {
         val (clientMutationId, ids, patch) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         updateMangas(ids, patch)
 
         val mangas =
             transaction {
-                MangaTable.selectAll().where { MangaTable.id inList ids }.map { MangaType(it) }
+                MangaTable.selectAll().where { MangaTable.id inList ids }.map { MangaType(it, userId) }
             }
 
         return UpdateMangasCategoriesPayload(

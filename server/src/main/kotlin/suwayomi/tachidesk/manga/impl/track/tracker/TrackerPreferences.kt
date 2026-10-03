@@ -12,13 +12,13 @@ object TrackerPreferences {
         Injekt.get<Application>().getSharedPreferences("tracker", Context.MODE_PRIVATE)
     private val logger = KotlinLogging.logger {}
 
-    fun getTrackUsername(sync: Tracker) = preferenceStore.getString(trackUsername(sync.id), "")
+    fun getTrackUsername(sync: Tracker) = preferenceStore.getString(trackUsername(sync), "")
 
-    fun getTrackPassword(sync: Tracker) = preferenceStore.getString(trackPassword(sync.id), "")
+    fun getTrackPassword(sync: Tracker) = preferenceStore.getString(trackPassword(sync), "")
 
     fun trackAuthExpired(tracker: Tracker) =
         preferenceStore.getBoolean(
-            trackTokenExpired(tracker.id),
+            trackTokenExpired(tracker),
             false,
         )
 
@@ -29,13 +29,13 @@ object TrackerPreferences {
     ) {
         preferenceStore
             .edit()
-            .putString(trackUsername(sync.id), username)
-            .putString(trackPassword(sync.id), password)
-            .putBoolean(trackTokenExpired(sync.id), false)
+            .putString(trackUsername(sync), username)
+            .putString(trackPassword(sync), password)
+            .putBoolean(trackTokenExpired(sync), false)
             .apply()
     }
 
-    fun getTrackToken(sync: Tracker) = preferenceStore.getString(trackToken(sync.id), "")
+    fun getTrackToken(sync: Tracker) = preferenceStore.getString(trackToken(sync), "")
 
     fun setTrackToken(
         sync: Tracker,
@@ -44,14 +44,14 @@ object TrackerPreferences {
         if (token == null) {
             preferenceStore
                 .edit()
-                .remove(trackToken(sync.id))
-                .putBoolean(trackTokenExpired(sync.id), false)
+                .remove(trackToken(sync))
+                .putBoolean(trackTokenExpired(sync), false)
                 .apply()
         } else {
             preferenceStore
                 .edit()
-                .putString(trackToken(sync.id), token)
-                .putBoolean(trackTokenExpired(sync.id), false)
+                .putString(trackToken(sync), token)
+                .putBoolean(trackTokenExpired(sync), false)
                 .apply()
         }
     }
@@ -59,29 +59,35 @@ object TrackerPreferences {
     fun setTrackTokenExpired(sync: Tracker) {
         preferenceStore
             .edit()
-            .putBoolean(trackTokenExpired(sync.id), true)
+            .putBoolean(trackTokenExpired(sync), true)
             .apply()
     }
 
-    fun getScoreType(sync: Tracker) = preferenceStore.getString(scoreType(sync.id), Anilist.POINT_10)
+    fun getScoreType(sync: Tracker) = preferenceStore.getString(scoreType(sync), Anilist.POINT_10)
 
     fun setScoreType(
         sync: Tracker,
         scoreType: String,
     ) = preferenceStore
         .edit()
-        .putString(scoreType(sync.id), scoreType)
+        .putString(scoreType(sync), scoreType)
         .apply()
 
     fun autoUpdateTrack() = preferenceStore.getBoolean("pref_auto_update_manga_sync_key", true)
 
-    fun trackUsername(trackerId: Int) = "pref_mangasync_username_$trackerId"
+    // the keys of the first account are the ones from before there were several accounts, so its logins stay as they are
+    private fun key(
+        name: String,
+        tracker: Tracker,
+    ) = if (tracker.userId == 1) "${name}_${tracker.id}" else "${name}_${tracker.id}_user${tracker.userId}"
 
-    private fun trackPassword(trackerId: Int) = "pref_mangasync_password_$trackerId"
+    fun trackUsername(tracker: Tracker) = key("pref_mangasync_username", tracker)
 
-    private fun trackToken(trackerId: Int) = "track_token_$trackerId"
+    private fun trackPassword(tracker: Tracker) = key("pref_mangasync_password", tracker)
 
-    private fun trackTokenExpired(trackerId: Int) = "track_token_expired_$trackerId"
+    private fun trackToken(tracker: Tracker) = key("track_token", tracker)
 
-    private fun scoreType(trackerId: Int) = "score_type_$trackerId"
+    private fun trackTokenExpired(tracker: Tracker) = key("track_token_expired", tracker)
+
+    private fun scoreType(tracker: Tracker) = key("score_type", tracker)
 }

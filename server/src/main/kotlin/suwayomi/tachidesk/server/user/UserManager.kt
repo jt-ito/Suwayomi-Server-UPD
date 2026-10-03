@@ -10,7 +10,12 @@ import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
+import suwayomi.tachidesk.global.model.table.GlobalMetaTable
+import suwayomi.tachidesk.manga.impl.track.tracker.TrackerManager
 import suwayomi.tachidesk.manga.model.table.CategoryTable
+import suwayomi.tachidesk.manga.model.table.ChapterMetaTable
+import suwayomi.tachidesk.manga.model.table.MangaMetaTable
+import suwayomi.tachidesk.manga.model.table.SourceMetaTable
 import suwayomi.tachidesk.server.serverConfig
 import suwayomi.tachidesk.server.user.model.UserDataClass
 import suwayomi.tachidesk.server.user.model.UserTable
@@ -172,6 +177,44 @@ object UserManager {
         }
     }
 
+    /**
+     * Gives a restored server backup the account of [username]: the existing one, or a new one with the stored login.
+     * An existing account keeps its password and role.
+     */
+    fun findOrCreateForRestore(
+        username: String,
+        passwordHash: String,
+        salt: String,
+        role: String,
+        createdAt: Long,
+    ): Int =
+        transaction {
+            val existing = UserTable.selectAll().where { UserTable.username eq username }.firstOrNull()
+            if (existing != null) {
+                return@transaction existing[UserTable.id].value
+            }
+
+            validateUsername(username)
+            val newId =
+                UserTable.insertAndGetId {
+                    it[UserTable.username] = username
+                    it[UserTable.passwordHash] = passwordHash
+                    it[UserTable.salt] = salt
+                    it[UserTable.role] = if (role.uppercase() in setOf("ADMIN", "MEMBER")) role.uppercase() else "MEMBER"
+                    it[UserTable.createdAt] = createdAt
+                    it[UserTable.lastLoginAt] = 0
+                }.value
+
+            CategoryTable.insert {
+                it[name] = "Default"
+                it[isDefault] = true
+                it[order] = 0
+                it[user] = EntityID(newId, UserTable)
+            }
+
+            newId
+        }
+
     fun updateUser(
         id: Int,
         newUsername: String? = null,
@@ -220,6 +263,12 @@ object UserManager {
         require(id != 1) { "Cannot delete primary admin user (id=1)" }
         transaction {
             UserTable.deleteWhere { UserTable.id eq id }
+            // these tables only know the account by its number, nothing removes their rows with it
+            GlobalMetaTable.deleteWhere { GlobalMetaTable.user eq id }
+            MangaMetaTable.deleteWhere { MangaMetaTable.user eq id }
+            ChapterMetaTable.deleteWhere { ChapterMetaTable.user eq id }
+            SourceMetaTable.deleteWhere { SourceMetaTable.user eq id }
         }
+        TrackerManager.forgetUser(id)
     }
 }

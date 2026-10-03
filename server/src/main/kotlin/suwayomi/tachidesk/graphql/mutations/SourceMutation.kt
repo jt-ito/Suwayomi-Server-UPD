@@ -7,6 +7,7 @@ import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.MultiSelectListPreference
 import androidx.preference.SwitchPreferenceCompat
+import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.LikePattern
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
@@ -21,6 +22,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.graphql.directives.RequireAuth
 import suwayomi.tachidesk.graphql.types.FilterChange
 import suwayomi.tachidesk.graphql.types.MangaType
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.types.MetaInput
 import suwayomi.tachidesk.graphql.types.Preference
 import suwayomi.tachidesk.graphql.types.SourceMetaType
@@ -48,10 +50,13 @@ class SourceMutation {
     )
 
     @RequireAuth
-    fun setSourceMeta(input: SetSourceMetaInput): SetSourceMetaPayload? {
+    fun setSourceMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetSourceMetaInput,
+    ): SetSourceMetaPayload? {
         val (clientMutationId, meta) = input
 
-        Source.modifyMeta(meta.sourceId, meta.key, meta.value)
+        Source.modifyMeta(meta.sourceId, meta.key, meta.value, dataFetchingEnvironment.currentUserId())
 
         return SetSourceMetaPayload(clientMutationId, meta)
     }
@@ -69,8 +74,12 @@ class SourceMutation {
     )
 
     @RequireAuth
-    fun deleteSourceMeta(input: DeleteSourceMetaInput): CompletableFuture<DeleteSourceMetaPayload?> {
+    fun deleteSourceMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteSourceMetaInput,
+    ): CompletableFuture<DeleteSourceMetaPayload?> {
         val (clientMutationId, sourceId, key) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         return future {
             val (meta, source) =
@@ -78,10 +87,14 @@ class SourceMutation {
                     val meta =
                         SourceMetaTable
                             .selectAll()
-                            .where { (SourceMetaTable.ref eq sourceId) and (SourceMetaTable.key eq key) }
+                            .where {
+                                (SourceMetaTable.ref eq sourceId) and (SourceMetaTable.key eq key) and (SourceMetaTable.user eq userId)
+                            }
                             .firstOrNull()
 
-                    SourceMetaTable.deleteWhere { (SourceMetaTable.ref eq sourceId) and (SourceMetaTable.key eq key) }
+                    SourceMetaTable.deleteWhere {
+                        (SourceMetaTable.ref eq sourceId) and (SourceMetaTable.key eq key) and (SourceMetaTable.user eq userId)
+                    }
 
                     val source =
                         SourceTable
@@ -118,8 +131,12 @@ class SourceMutation {
     )
 
     @RequireAuth
-    fun setSourceMetas(input: SetSourceMetasInput): CompletableFuture<SetSourceMetasPayload?> {
+    fun setSourceMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetSourceMetasInput,
+    ): CompletableFuture<SetSourceMetasPayload?> {
         val (clientMutationId, items) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         return future {
             val metaBySourceId =
@@ -130,7 +147,7 @@ class SourceMutation {
                     }.groupBy({ it.first }, { it.second })
                     .mapValues { (_, maps) -> maps.reduce { acc, map -> acc + map } }
 
-            Source.modifySourceMetas(metaBySourceId)
+            Source.modifySourceMetas(metaBySourceId, userId)
 
             val allSourceIds = metaBySourceId.keys
             val allMetaKeys = metaBySourceId.values.flatMap { it.keys }.distinct()
@@ -140,7 +157,11 @@ class SourceMutation {
                     val updatedMetas =
                         SourceMetaTable
                             .selectAll()
-                            .where { (SourceMetaTable.ref inList allSourceIds) and (SourceMetaTable.key inList allMetaKeys) }
+                            .where {
+                                (SourceMetaTable.ref inList allSourceIds) and
+                                    (SourceMetaTable.key inList allMetaKeys) and
+                                    (SourceMetaTable.user eq userId)
+                            }
                             .map { SourceMetaType(it) }
 
                     val sources =
@@ -175,8 +196,12 @@ class SourceMutation {
     )
 
     @RequireAuth
-    fun deleteSourceMetas(input: DeleteSourceMetasInput): CompletableFuture<DeleteSourceMetasPayload?> {
+    fun deleteSourceMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteSourceMetasInput,
+    ): CompletableFuture<DeleteSourceMetasPayload?> {
         val (clientMutationId, items) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         return future {
             items.forEach { item ->
@@ -207,7 +232,7 @@ class SourceMutation {
                                 keyCondition ?: prefixCondition!!
                             }
 
-                        val condition = (SourceMetaTable.ref inList item.sourceIds) and metaKeyCondition
+                        val condition = (SourceMetaTable.ref inList item.sourceIds) and metaKeyCondition and (SourceMetaTable.user eq userId)
 
                         deletedMetas +=
                             SourceMetaTable
@@ -257,8 +282,12 @@ class SourceMutation {
     )
 
     @RequireAuth
-    fun fetchSourceManga(input: FetchSourceMangaInput): CompletableFuture<FetchSourceMangaPayload?> {
+    fun fetchSourceManga(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: FetchSourceMangaInput,
+    ): CompletableFuture<FetchSourceMangaPayload?> {
         val (clientMutationId, sourceId, type, page, query, filters) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         return future {
             val source = GetSource.getSourceOrNull(sourceId)!!
@@ -289,7 +318,7 @@ class SourceMutation {
                     MangaTable
                         .selectAll()
                         .where { MangaTable.id inList mangaIds }
-                        .map { MangaType(it) }
+                        .map { MangaType(it, userId) }
                 }.sortedBy {
                     mangaIds.indexOf(it.id)
                 }

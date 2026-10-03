@@ -23,6 +23,7 @@ import org.jetbrains.exposed.v1.jdbc.statements.toExecutable
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.server.getAttribute
 import suwayomi.tachidesk.graphql.types.ChapterMetaType
 import suwayomi.tachidesk.graphql.types.ChapterType
@@ -229,8 +230,12 @@ class ChapterMutation {
 
     @RequireAuth
     @GraphQLDeprecated("Deprecated in Tachiyomix 1.6", ReplaceWith("fetchMangaAndChapters"))
-    fun fetchChapters(input: FetchChaptersInput): CompletableFuture<FetchChaptersPayload?> {
+    fun fetchChapters(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: FetchChaptersInput,
+    ): CompletableFuture<FetchChaptersPayload?> {
         val (clientMutationId, mangaId) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         return future {
             Manga.updateMangaAndChapters(mangaId, updateManga = false)
@@ -241,7 +246,7 @@ class ChapterMutation {
                         .selectAll()
                         .where { ChapterTable.manga eq mangaId }
                         .orderBy(ChapterTable.sourceOrder)
-                        .map { ChapterType(it) }
+                        .map { ChapterType(it, userId) }
                 }
 
             FetchChaptersPayload(
@@ -262,10 +267,13 @@ class ChapterMutation {
     )
 
     @RequireAuth
-    fun setChapterMeta(input: SetChapterMetaInput): SetChapterMetaPayload? {
+    fun setChapterMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetChapterMetaInput,
+    ): SetChapterMetaPayload? {
         val (clientMutationId, meta) = input
 
-        Chapter.modifyChapterMeta(meta.chapterId, meta.key, meta.value)
+        Chapter.modifyChapterMeta(meta.chapterId, meta.key, meta.value, dataFetchingEnvironment.currentUserId())
 
         return SetChapterMetaPayload(clientMutationId, meta)
     }
@@ -283,22 +291,30 @@ class ChapterMutation {
     )
 
     @RequireAuth
-    fun deleteChapterMeta(input: DeleteChapterMetaInput): DeleteChapterMetaPayload? {
+    fun deleteChapterMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteChapterMetaInput,
+    ): DeleteChapterMetaPayload? {
         val (clientMutationId, chapterId, key) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         val (meta, chapter) =
             transaction {
                 val meta =
                     ChapterMetaTable
                         .selectAll()
-                        .where { (ChapterMetaTable.ref eq chapterId) and (ChapterMetaTable.key eq key) }
+                        .where {
+                            (ChapterMetaTable.ref eq chapterId) and (ChapterMetaTable.key eq key) and (ChapterMetaTable.user eq userId)
+                        }
                         .firstOrNull()
 
-                ChapterMetaTable.deleteWhere { (ChapterMetaTable.ref eq chapterId) and (ChapterMetaTable.key eq key) }
+                ChapterMetaTable.deleteWhere {
+                    (ChapterMetaTable.ref eq chapterId) and (ChapterMetaTable.key eq key) and (ChapterMetaTable.user eq userId)
+                }
 
                 val chapter =
                     transaction {
-                        ChapterType(ChapterTable.selectAll().where { ChapterTable.id eq chapterId }.first())
+                        ChapterType(ChapterTable.selectAll().where { ChapterTable.id eq chapterId }.first(), userId)
                     }
 
                 if (meta != null) {
@@ -328,8 +344,12 @@ class ChapterMutation {
     )
 
     @RequireAuth
-    fun setChapterMetas(input: SetChapterMetasInput): SetChapterMetasPayload? {
+    fun setChapterMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetChapterMetasInput,
+    ): SetChapterMetasPayload? {
         val (clientMutationId, items) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         val metaByChapterId =
             items
@@ -339,7 +359,7 @@ class ChapterMutation {
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, maps) -> maps.reduce { acc, map -> acc + map } }
 
-        Chapter.modifyChaptersMetas(metaByChapterId)
+        Chapter.modifyChaptersMetas(metaByChapterId, userId)
 
         val allChapterIds = metaByChapterId.keys
         val allMetaKeys = metaByChapterId.values.flatMap { it.keys }.distinct()
@@ -349,14 +369,18 @@ class ChapterMutation {
                 val updatedMetas =
                     ChapterMetaTable
                         .selectAll()
-                        .where { (ChapterMetaTable.ref inList allChapterIds) and (ChapterMetaTable.key inList allMetaKeys) }
+                        .where {
+                            (ChapterMetaTable.ref inList allChapterIds) and
+                                (ChapterMetaTable.key inList allMetaKeys) and
+                                (ChapterMetaTable.user eq userId)
+                        }
                         .map { ChapterMetaType(it) }
 
                 val chapters =
                     ChapterTable
                         .selectAll()
                         .where { ChapterTable.id inList allChapterIds }
-                        .map { ChapterType(it) }
+                        .map { ChapterType(it, userId) }
                         .distinctBy { it.id }
 
                 updatedMetas to chapters
@@ -383,8 +407,12 @@ class ChapterMutation {
     )
 
     @RequireAuth
-    fun deleteChapterMetas(input: DeleteChapterMetasInput): DeleteChapterMetasPayload? {
+    fun deleteChapterMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteChapterMetasInput,
+    ): DeleteChapterMetasPayload? {
         val (clientMutationId, items) = input
+        val userId = dataFetchingEnvironment.currentUserId()
 
         items.forEach { item ->
             require(!item.keys.isNullOrEmpty() || !item.prefixes.isNullOrEmpty()) {
@@ -414,7 +442,7 @@ class ChapterMutation {
                             keyCondition ?: prefixCondition!!
                         }
 
-                    val condition = (ChapterMetaTable.ref inList item.chapterIds) and metaKeyCondition
+                    val condition = (ChapterMetaTable.ref inList item.chapterIds) and metaKeyCondition and (ChapterMetaTable.user eq userId)
 
                     deletedMetas +=
                         ChapterMetaTable
@@ -434,7 +462,7 @@ class ChapterMutation {
                 ChapterTable
                     .selectAll()
                     .where { ChapterTable.id inList allChapterIds }
-                    .map { ChapterType(it) }
+                    .map { ChapterType(it, userId) }
                     .distinctBy { it.id }
             }
 

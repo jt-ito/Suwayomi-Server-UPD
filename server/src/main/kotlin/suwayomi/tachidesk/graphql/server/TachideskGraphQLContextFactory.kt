@@ -16,6 +16,7 @@ import org.dataloader.BatchLoaderEnvironment
 import suwayomi.tachidesk.server.JavalinSetup.Attribute
 import suwayomi.tachidesk.server.JavalinSetup.getAttribute
 import suwayomi.tachidesk.server.user.UserType
+import suwayomi.tachidesk.server.user.idOrNull
 
 /**
  * Custom logic for how Suwayomi-Server should create its context given the [Context]
@@ -55,3 +56,10 @@ val BatchLoaderEnvironment.graphQlContext: GraphQLContext
     get() = keyContextsList.filterIsInstance<GraphQLContext>().first()
 
 fun <T : Any> BatchLoaderEnvironment.getAttribute(attribute: Attribute<T>): T = graphQlContext.getAttribute(attribute)
+
+/** The id of the account making the request (the first account when authentication is off). */
+fun GraphQLContext.currentUserId(): Int = get<UserType>(Attribute.TachideskUser)?.idOrNull ?: 1
+
+fun DataFetchingEnvironment.currentUserId(): Int = graphQlContext.currentUserId()
+
+fun BatchLoaderEnvironment.currentUserId(): Int = graphQlContext.currentUserId()

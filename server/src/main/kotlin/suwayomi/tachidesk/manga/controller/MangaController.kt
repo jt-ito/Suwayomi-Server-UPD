@@ -241,8 +241,8 @@ object MangaController {
                 }
             },
             behaviorOf = { ctx, mangaId, key, value ->
-                ctx.getAttribute(Attribute.TachideskUser).requireUser()
-                Manga.modifyMangaMeta(mangaId, key, value)
+                val userId = ctx.getAttribute(Attribute.TachideskUser).requireUser()
+                Manga.modifyMangaMeta(mangaId, key, value, userId)
                 ctx.status(200)
             },
             withResults = {
@@ -451,8 +451,8 @@ object MangaController {
                 }
             },
             behaviorOf = { ctx, mangaId, chapterIndex, key, value ->
-                ctx.getAttribute(Attribute.TachideskUser).requireUser()
-                Chapter.modifyChapterMeta(mangaId, chapterIndex, key, value)
+                val userId = ctx.getAttribute(Attribute.TachideskUser).requireUser()
+                Chapter.modifyChapterMeta(mangaId, chapterIndex, key, value, userId)
 
                 ctx.status(200)
             },

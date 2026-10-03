@@ -1,6 +1,8 @@
 package suwayomi.tachidesk.global.impl
 
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.statements.BatchUpdateStatement
 import org.jetbrains.exposed.v1.jdbc.batchInsert
@@ -20,16 +22,20 @@ object GlobalMeta {
     fun modifyMeta(
         key: String,
         value: String,
+        userId: Int = 1,
     ) {
-        modifyMetas(mapOf(key to value))
+        modifyMetas(mapOf(key to value), userId)
     }
 
-    fun modifyMetas(meta: Map<String, String>) {
+    fun modifyMetas(
+        meta: Map<String, String>,
+        userId: Int = 1,
+    ) {
         transaction {
             val dbMetaMap =
                 GlobalMetaTable
                     .selectAll()
-                    .where { GlobalMetaTable.key inList meta.keys }
+                    .where { (GlobalMetaTable.key inList meta.keys) and (GlobalMetaTable.user eq userId) }
                     .associateBy { it[GlobalMetaTable.key] }
             val (existingMeta, newMeta) = meta.toList().partition { (key) -> key in dbMetaMap.keys }
 
@@ -46,6 +52,7 @@ object GlobalMeta {
 
             if (newMeta.isNotEmpty()) {
                 GlobalMetaTable.batchInsert(newMeta) { (key, value) ->
+                    this[GlobalMetaTable.user] = userId
                     this[GlobalMetaTable.key] = key
                     this[GlobalMetaTable.value] = value
                 }
@@ -53,10 +60,11 @@ object GlobalMeta {
         }
     }
 
-    fun getMetaMap(): Map<String, String> =
+    fun getMetaMap(userId: Int = 1): Map<String, String> =
         transaction {
             GlobalMetaTable
                 .selectAll()
+                .where { GlobalMetaTable.user eq userId }
                 .associate { it[GlobalMetaTable.key] to it[GlobalMetaTable.value] }
         }
 }

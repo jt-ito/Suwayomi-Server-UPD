@@ -10,6 +10,8 @@ import java.io.IOException
 abstract class Tracker(
     val id: Int,
     val name: String,
+    // the account the logins belong to, every account has its own tracker logins
+    val userId: Int = 1,
 ) {
     val trackPreferences = TrackerPreferences
     private val networkService: NetworkHelper by injectLazy()

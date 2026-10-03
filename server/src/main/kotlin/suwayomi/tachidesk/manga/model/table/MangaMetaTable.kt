@@ -28,5 +28,6 @@ import suwayomi.tachidesk.manga.model.table.MangaMetaTable.ref
 object MangaMetaTable : IntIdTable() {
     val key = varchar("meta_key", 256)
     val value = varchar("value", 4096)
+    val user = integer("user_id").default(1)
     val ref = reference("manga_ref", MangaTable, ReferenceOption.CASCADE)
 }

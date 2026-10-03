@@ -12,7 +12,8 @@ import java.text.DecimalFormat
 
 class Kitsu(
     id: Int,
-) : Tracker(id, "Kitsu"),
+    userId: Int = 1,
+) : Tracker(id, "Kitsu", userId),
     DeletableTracker {
     companion object {
         const val READING = 1

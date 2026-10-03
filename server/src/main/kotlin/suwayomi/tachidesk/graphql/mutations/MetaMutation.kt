@@ -2,8 +2,10 @@
 
 package suwayomi.tachidesk.graphql.mutations
 
+import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.LikePattern
 import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.like
@@ -14,6 +16,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import suwayomi.tachidesk.global.impl.GlobalMeta
 import suwayomi.tachidesk.global.model.table.GlobalMetaTable
 import suwayomi.tachidesk.graphql.directives.RequireAuth
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.types.GlobalMetaType
 import suwayomi.tachidesk.graphql.types.MetaInput
 
@@ -29,10 +32,13 @@ class MetaMutation {
     )
 
     @RequireAuth
-    fun setGlobalMeta(input: SetGlobalMetaInput): SetGlobalMetaPayload? {
+    fun setGlobalMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetGlobalMetaInput,
+    ): SetGlobalMetaPayload? {
         val (clientMutationId, meta) = input
 
-        GlobalMeta.modifyMeta(meta.key, meta.value)
+        GlobalMeta.modifyMeta(meta.key, meta.value, dataFetchingEnvironment.currentUserId())
 
         return SetGlobalMetaPayload(clientMutationId, meta)
     }
@@ -48,18 +54,23 @@ class MetaMutation {
     )
 
     @RequireAuth
-    fun deleteGlobalMeta(input: DeleteGlobalMetaInput): DeleteGlobalMetaPayload? {
+    fun deleteGlobalMeta(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteGlobalMetaInput,
+    ): DeleteGlobalMetaPayload? {
         val (clientMutationId, key) = input
+        val userId = dataFetchingEnvironment.currentUserId()
+        val ownMeta = (GlobalMetaTable.key eq key) and (GlobalMetaTable.user eq userId)
 
         val meta =
             transaction {
                 val meta =
                     GlobalMetaTable
                         .selectAll()
-                        .where { GlobalMetaTable.key eq key }
+                        .where { ownMeta }
                         .firstOrNull()
 
-                GlobalMetaTable.deleteWhere { GlobalMetaTable.key eq key }
+                GlobalMetaTable.deleteWhere { ownMeta }
 
                 if (meta != null) {
                     GlobalMetaType(meta)
@@ -82,17 +93,21 @@ class MetaMutation {
     )
 
     @RequireAuth
-    fun setGlobalMetas(input: SetGlobalMetasInput): SetGlobalMetasPayload? {
+    fun setGlobalMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SetGlobalMetasInput,
+    ): SetGlobalMetasPayload? {
         val (clientMutationId, metas) = input
 
         val metaMap = metas.associate { it.key to it.value }
-        GlobalMeta.modifyMetas(metaMap)
+        val userId = dataFetchingEnvironment.currentUserId()
+        GlobalMeta.modifyMetas(metaMap, userId)
 
         val updatedMetas =
             transaction {
                 GlobalMetaTable
                     .selectAll()
-                    .where { GlobalMetaTable.key inList metaMap.keys }
+                    .where { (GlobalMetaTable.key inList metaMap.keys) and (GlobalMetaTable.user eq userId) }
                     .map { GlobalMetaType(it) }
             }
 
@@ -111,13 +126,17 @@ class MetaMutation {
     )
 
     @RequireAuth
-    fun deleteGlobalMetas(input: DeleteGlobalMetasInput): DeleteGlobalMetasPayload? {
+    fun deleteGlobalMetas(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: DeleteGlobalMetasInput,
+    ): DeleteGlobalMetasPayload? {
         val (clientMutationId, keys, prefixes) = input
 
         require(!keys.isNullOrEmpty() || !prefixes.isNullOrEmpty()) {
             "Either 'keys' or 'prefixes' must be provided"
         }
 
+        val userId = dataFetchingEnvironment.currentUserId()
         val metas =
             transaction {
                 val keyCondition: Op<Boolean>? = keys?.takeIf { it.isNotEmpty() }?.let { GlobalMetaTable.key inList it }
@@ -129,11 +148,13 @@ class MetaMutation {
                         ?.reduceOrNull { acc, op -> acc or op }
 
                 val finalCondition =
-                    if (keyCondition != null && prefixCondition != null) {
-                        keyCondition or prefixCondition
-                    } else {
-                        keyCondition ?: prefixCondition!!
-                    }
+                    (
+                        if (keyCondition != null && prefixCondition != null) {
+                            keyCondition or prefixCondition
+                        } else {
+                            keyCondition ?: prefixCondition!!
+                        }
+                    ) and (GlobalMetaTable.user eq userId)
 
                 val metas =
                     GlobalMetaTable

@@ -161,11 +161,14 @@ object Source {
         unregisterSource(sourceId)
     }
 
-    fun getSourcesMetaMaps(ids: List<Long>): Map<Long, Map<String, String>> =
+    fun getSourcesMetaMaps(
+        ids: List<Long>,
+        userId: Int = 1,
+    ): Map<Long, Map<String, String>> =
         transaction {
             SourceMetaTable
                 .selectAll()
-                .where { SourceMetaTable.ref inList ids }
+                .where { (SourceMetaTable.ref inList ids) and (SourceMetaTable.user eq userId) }
                 .groupBy { it[SourceMetaTable.ref] }
                 .mapValues { it.value.associate { it[SourceMetaTable.key] to it[SourceMetaTable.value] } }
                 .withDefault { emptyMap() }
@@ -175,11 +178,15 @@ object Source {
         sourceId: Long,
         key: String,
         value: String,
+        userId: Int = 1,
     ) {
-        modifySourceMetas(mapOf(sourceId to mapOf(key to value)))
+        modifySourceMetas(mapOf(sourceId to mapOf(key to value)), userId)
     }
 
-    fun modifySourceMetas(metaBySourceIds: Map<Long, Map<String, String>>) {
+    fun modifySourceMetas(
+        metaBySourceIds: Map<Long, Map<String, String>>,
+        userId: Int = 1,
+    ) {
         transaction {
             val sourceIds = metaBySourceIds.keys
             val metaKeys = metaBySourceIds.flatMap { it.value.keys }
@@ -187,7 +194,9 @@ object Source {
             val dbMetaBySourceId =
                 SourceMetaTable
                     .selectAll()
-                    .where { (SourceMetaTable.ref inList sourceIds) and (SourceMetaTable.key inList metaKeys) }
+                    .where {
+                        (SourceMetaTable.ref inList sourceIds) and (SourceMetaTable.key inList metaKeys) and (SourceMetaTable.user eq userId)
+                    }
                     .groupBy { it[SourceMetaTable.ref] }
 
             val existingMetaByMetaId =
@@ -225,6 +234,7 @@ object Source {
 
             if (newMetaBySourceId.isNotEmpty()) {
                 SourceMetaTable.batchInsert(newMetaBySourceId) { (sourceId, entry) ->
+                    this[SourceMetaTable.user] = userId
                     this[SourceMetaTable.ref] = sourceId
                     this[SourceMetaTable.key] = entry.key
                     this[SourceMetaTable.value] = entry.value

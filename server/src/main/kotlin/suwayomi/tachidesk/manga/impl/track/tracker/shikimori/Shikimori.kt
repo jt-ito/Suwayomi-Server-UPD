@@ -12,7 +12,8 @@ import java.io.IOException
 
 class Shikimori(
     id: Int,
-) : Tracker(id, "Shikimori"),
+    userId: Int = 1,
+) : Tracker(id, "Shikimori", userId),
     DeletableTracker {
     companion object {
         const val READING = 1

@@ -11,7 +11,8 @@ import suwayomi.tachidesk.manga.impl.track.tracker.model.TrackSearch
 
 class MangaUpdates(
     id: Int,
-) : Tracker(id, "MangaUpdates"),
+    userId: Int = 1,
+) : Tracker(id, "MangaUpdates", userId),
     DeletableTracker {
     companion object {
         const val READING_LIST = 0

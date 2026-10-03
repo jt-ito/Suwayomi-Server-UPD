@@ -23,6 +23,7 @@ import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompare
 import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompareEntity
 import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompareString
 import suwayomi.tachidesk.graphql.queries.filter.applyOps
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.Order
 import suwayomi.tachidesk.graphql.server.primitives.OrderBy
@@ -40,6 +41,7 @@ import suwayomi.tachidesk.graphql.types.TrackerNodeList
 import suwayomi.tachidesk.graphql.types.TrackerType
 import suwayomi.tachidesk.manga.impl.track.tracker.TrackerManager
 import suwayomi.tachidesk.manga.model.table.TrackRecordTable
+import suwayomi.tachidesk.manga.model.table.ownedBy
 import suwayomi.tachidesk.manga.model.table.insertAll
 import suwayomi.tachidesk.server.JavalinSetup.future
 import java.util.concurrent.CompletableFuture
@@ -131,6 +133,7 @@ class TrackQuery {
 
     @RequireAuth
     fun trackers(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: TrackerCondition? = null,
         @GraphQLDeprecated(
             "Replaced with order",
@@ -151,7 +154,7 @@ class TrackQuery {
     ): TrackerNodeList {
         val (queryResults, resultsAsType) =
             run {
-                var res = TrackerManager.services.map { TrackerType(it) }
+                var res = TrackerManager.services(dataFetchingEnvironment.currentUserId()).map { TrackerType(it) }
 
                 if (condition != null) {
                     res =
@@ -408,6 +411,7 @@ class TrackQuery {
 
     @RequireAuth
     fun trackRecords(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: TrackRecordCondition? = null,
         filter: TrackRecordFilter? = null,
         @GraphQLDeprecated(
@@ -427,9 +431,10 @@ class TrackQuery {
         last: Int? = null,
         offset: Int? = null,
     ): TrackRecordNodeList {
+        val userId = dataFetchingEnvironment.currentUserId()
         val queryResults =
             transaction {
-                val res = TrackRecordTable.selectAll()
+                val res = TrackRecordTable.selectAll().where { TrackRecordTable.ownedBy(userId) }
 
                 res.applyOps(condition, filter)
 
@@ -501,10 +506,15 @@ class TrackQuery {
     )
 
     @RequireAuth
-    fun searchTracker(input: SearchTrackerInput): CompletableFuture<SearchTrackerPayload> =
-        future {
+    fun searchTracker(
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        input: SearchTrackerInput,
+    ): CompletableFuture<SearchTrackerPayload> {
+        val userId = dataFetchingEnvironment.currentUserId()
+
+        return future {
             val tracker =
-                requireNotNull(TrackerManager.getTracker(input.trackerId)) {
+                requireNotNull(TrackerManager.getTracker(input.trackerId, userId)) {
                     "Tracker not found"
                 }
             require(tracker.isLoggedIn) {
@@ -516,4 +526,5 @@ class TrackQuery {
                 },
             )
         }
+    }
 }

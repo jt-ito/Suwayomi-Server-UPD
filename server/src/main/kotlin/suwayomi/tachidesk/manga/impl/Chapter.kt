@@ -597,21 +597,27 @@ object Chapter {
         }
     }
 
-    fun getChaptersMetaMaps(chapterIds: List<Int>): Map<Int, Map<String, String>> =
+    fun getChaptersMetaMaps(
+        chapterIds: List<Int>,
+        userId: Int = 1,
+    ): Map<Int, Map<String, String>> =
         transaction {
             ChapterMetaTable
                 .selectAll()
-                .where { ChapterMetaTable.ref inList chapterIds }
+                .where { (ChapterMetaTable.ref inList chapterIds) and (ChapterMetaTable.user eq userId) }
                 .groupBy { it[ChapterMetaTable.ref].value }
                 .mapValues { it.value.associate { it[ChapterMetaTable.key] to it[ChapterMetaTable.value] } }
                 .withDefault { emptyMap() }
         }
 
-    fun getChapterMetaMap(chapter: Int): Map<String, String> =
+    fun getChapterMetaMap(
+        chapter: Int,
+        userId: Int = 1,
+    ): Map<String, String> =
         transaction {
             ChapterMetaTable
                 .selectAll()
-                .where { ChapterMetaTable.ref eq chapter }
+                .where { (ChapterMetaTable.ref eq chapter) and (ChapterMetaTable.user eq userId) }
                 .associate { it[ChapterMetaTable.key] to it[ChapterMetaTable.value] }
         }
 
@@ -620,6 +626,7 @@ object Chapter {
         chapterIndex: Int,
         key: String,
         value: String,
+        userId: Int = 1,
     ) {
         transaction {
             val chapterId =
@@ -628,7 +635,7 @@ object Chapter {
                     .where { (ChapterTable.manga eq mangaId) and (ChapterTable.sourceOrder eq chapterIndex) }
                     .first()[ChapterTable.id]
                     .value
-            modifyChapterMeta(chapterId, key, value)
+            modifyChapterMeta(chapterId, key, value, userId)
         }
     }
 
@@ -636,11 +643,15 @@ object Chapter {
         chapterId: Int,
         key: String,
         value: String,
+        userId: Int = 1,
     ) {
-        modifyChaptersMetas(mapOf(chapterId to mapOf(key to value)))
+        modifyChaptersMetas(mapOf(chapterId to mapOf(key to value)), userId)
     }
 
-    fun modifyChaptersMetas(metaByChapterId: Map<Int, Map<String, String>>) {
+    fun modifyChaptersMetas(
+        metaByChapterId: Map<Int, Map<String, String>>,
+        userId: Int = 1,
+    ) {
         transaction {
             val chapterIds = metaByChapterId.keys
             val metaKeys = metaByChapterId.flatMap { it.value.keys }
@@ -648,7 +659,9 @@ object Chapter {
             val dbMetaByChapterId =
                 ChapterMetaTable
                     .selectAll()
-                    .where { (ChapterMetaTable.ref inList chapterIds) and (ChapterMetaTable.key inList metaKeys) }
+                    .where {
+                        (ChapterMetaTable.ref inList chapterIds) and (ChapterMetaTable.key inList metaKeys) and (ChapterMetaTable.user eq userId)
+                    }
                     .groupBy { it[ChapterMetaTable.ref].value }
 
             val existingMetaByMetaId =
@@ -686,6 +699,7 @@ object Chapter {
 
             if (newMetaByChapterId.isNotEmpty()) {
                 ChapterMetaTable.batchInsert(newMetaByChapterId) { (chapterId, entry) ->
+                    this[ChapterMetaTable.user] = userId
                     this[ChapterMetaTable.ref] = EntityID(chapterId, ChapterTable)
                     this[ChapterMetaTable.key] = entry.key
                     this[ChapterMetaTable.value] = entry.value

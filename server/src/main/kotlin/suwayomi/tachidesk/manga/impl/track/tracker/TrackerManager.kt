@@ -6,6 +6,7 @@ import suwayomi.tachidesk.manga.impl.track.tracker.kitsu.Kitsu
 import suwayomi.tachidesk.manga.impl.track.tracker.mangaupdates.MangaUpdates
 import suwayomi.tachidesk.manga.impl.track.tracker.myanimelist.MyAnimeList
 import suwayomi.tachidesk.manga.impl.track.tracker.shikimori.Shikimori
+import java.util.concurrent.ConcurrentHashMap
 
 object TrackerManager {
     const val MYANIMELIST = 1
@@ -18,22 +19,37 @@ object TrackerManager {
     const val KAVITA = 8
     const val SUWAYOMI = 9
 
-    val myAnimeList = MyAnimeList(MYANIMELIST)
-    val aniList = Anilist(ANILIST)
+    private val servicesByUser = ConcurrentHashMap<Int, List<Tracker>>()
 
-    val kitsu = Kitsu(KITSU)
+    // every account has its own logins, so every account gets its own tracker instances
+    fun services(userId: Int = 1): List<Tracker> =
+        servicesByUser.getOrPut(userId) {
+            listOf(
+                MyAnimeList(MYANIMELIST, userId),
+                Anilist(ANILIST, userId),
+                Kitsu(KITSU, userId),
+                MangaUpdates(MANGA_UPDATES, userId),
+                Shikimori(SHIKIMORI, userId),
+                Bangumi(BANGUMI, userId),
+            )
+        }
 
-    val shikimori = Shikimori(SHIKIMORI)
-    val bangumi = Bangumi(BANGUMI)
+    val services: List<Tracker>
+        get() = services(1)
 
-//    val komga = Komga(KOMGA)
-    val mangaUpdates = MangaUpdates(MANGA_UPDATES)
-//    val kavita = Kavita(context, KAVITA)
-//    val suwayomi = Suwayomi(SUWAYOMI)
+    fun getTracker(
+        id: Int,
+        userId: Int = 1,
+    ) = services(userId).find { it.id == id }
 
-    val services: List<Tracker> = listOf(myAnimeList, aniList, kitsu, mangaUpdates, shikimori, bangumi)
+    fun hasLoggedTracker(userId: Int = 1) = services(userId).any { it.isLoggedIn }
 
-    fun getTracker(id: Int) = services.find { it.id == id }
-
-    fun hasLoggedTracker() = services.any { it.isLoggedIn }
+    /** Logs a deleted account out of its trackers, so its tokens don't stay behind. */
+    fun forgetUser(userId: Int) {
+        servicesByUser.remove(userId)?.forEach { tracker ->
+            if (tracker.isLoggedIn) {
+                runCatching { tracker.logout() }
+            }
+        }
+    }
 }
