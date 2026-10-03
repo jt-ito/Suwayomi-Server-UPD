@@ -367,7 +367,7 @@ class Updater : IUpdater {
 
             val categoriesToUpdateMangas =
                 categoriesToUpdate
-                    .flatMap { CategoryManga.getCategoryMangaList(it.id) }
+                    .flatMap { CategoryManga.getCategoryMangaList(it.id, inAnyLibrary = true) }
                     .distinctBy { it.id }
             val mangasToCategoriesMap = CategoryManga.getMangasCategories(categoriesToUpdateMangas.map { it.id })
             val mangasToUpdate =

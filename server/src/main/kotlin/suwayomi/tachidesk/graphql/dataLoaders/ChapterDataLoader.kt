@@ -7,6 +7,11 @@
 
 package suwayomi.tachidesk.graphql.dataLoaders
 
+import suwayomi.tachidesk.manga.model.table.UserChapterTable
+import suwayomi.tachidesk.graphql.server.currentUserId
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.JoinType
 import com.expediagroup.graphql.dataloader.KotlinDataLoader
 import graphql.GraphQLContext
 import org.dataloader.DataLoader
@@ -33,6 +38,16 @@ import suwayomi.tachidesk.manga.model.table.ChapterDedup.unreadChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.server.JavalinSetup.future
 import suwayomi.tachidesk.server.user.idOrNull
+
+/** The chapters with the read state of one account (chapters without a row of their own have null there). */
+private fun ownReadState(userId: Int) =
+    ChapterTable.join(
+        UserChapterTable,
+        JoinType.LEFT,
+        onColumn = ChapterTable.id,
+        otherColumn = UserChapterTable.chapter,
+        additionalConstraint = { UserChapterTable.user eq userId },
+    )
 
 class ChapterDataLoader : KotlinDataLoader<Int, ChapterType> {
     override val dataLoaderName = "ChapterDataLoader"
@@ -276,16 +291,24 @@ class LastReadChapterForMangaDataLoader : KotlinDataLoader<Int, ChapterType> {
 
     override fun getDataLoader(graphQLContext: GraphQLContext): DataLoader<Int, ChapterType> =
         DataLoaderFactory.newDataLoader { ids ->
+            val userId = graphQLContext.currentUserId()
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
                     val lastReadChaptersByMangaId =
-                        ChapterTable
-                            .selectAll()
-                            .where { (ChapterTable.manga inList ids) }
-                            .orderBy(ChapterTable.lastReadAt to SortOrder.DESC)
-                            .groupBy { it[ChapterTable.manga].value }
-                    ids.map { id -> lastReadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first()) } }
+                        if (userId == 1) {
+                            ChapterTable
+                                .selectAll()
+                                .where { (ChapterTable.manga inList ids) }
+                                .orderBy(ChapterTable.lastReadAt to SortOrder.DESC)
+                        } else {
+                            // the reading of the other accounts is kept in user_chapter
+                            ownReadState(userId)
+                                .selectAll()
+                                .where { (ChapterTable.manga inList ids) }
+                                .orderBy(UserChapterTable.lastReadAt to SortOrder.DESC_NULLS_LAST)
+                        }.groupBy { it[ChapterTable.manga].value }
+                    ids.map { id -> lastReadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first(), userId) } }
                 }
             }
         }
@@ -296,16 +319,23 @@ class LatestReadChapterForMangaDataLoader : KotlinDataLoader<Int, ChapterType> {
 
     override fun getDataLoader(graphQLContext: GraphQLContext): DataLoader<Int, ChapterType> =
         DataLoaderFactory.newDataLoader { ids ->
+            val userId = graphQLContext.currentUserId()
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
                     val latestReadChaptersByMangaId =
-                        ChapterTable
-                            .selectAll()
-                            .where { (ChapterTable.manga inList ids) and (ChapterTable.isRead eq true) }
-                            .orderBy(ChapterTable.sourceOrder to SortOrder.DESC)
-                            .groupBy { it[ChapterTable.manga].value }
-                    ids.map { id -> latestReadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first()) } }
+                        if (userId == 1) {
+                            ChapterTable
+                                .selectAll()
+                                .where { (ChapterTable.manga inList ids) and (ChapterTable.isRead eq true) }
+                                .orderBy(ChapterTable.sourceOrder to SortOrder.DESC)
+                        } else {
+                            ownReadState(userId)
+                                .selectAll()
+                                .where { (ChapterTable.manga inList ids) and (UserChapterTable.isRead eq true) }
+                                .orderBy(ChapterTable.sourceOrder to SortOrder.DESC)
+                        }.groupBy { it[ChapterTable.manga].value }
+                    ids.map { id -> latestReadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first(), userId) } }
                 }
             }
         }
@@ -356,16 +386,26 @@ class FirstUnreadChapterForMangaDataLoader : KotlinDataLoader<Int, ChapterType> 
 
     override fun getDataLoader(graphQLContext: GraphQLContext): DataLoader<Int, ChapterType> =
         DataLoaderFactory.newDataLoader { ids ->
+            val userId = graphQLContext.currentUserId()
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
                     val firstUnreadChaptersByMangaId =
-                        ChapterTable
-                            .selectAll()
-                            .where { (ChapterTable.manga inList ids) and (ChapterTable.isRead eq false) }
-                            .orderBy(ChapterTable.sourceOrder to SortOrder.ASC)
-                            .groupBy { it[ChapterTable.manga].value }
-                    ids.map { id -> firstUnreadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first()) } }
+                        if (userId == 1) {
+                            ChapterTable
+                                .selectAll()
+                                .where { (ChapterTable.manga inList ids) and (ChapterTable.isRead eq false) }
+                                .orderBy(ChapterTable.sourceOrder to SortOrder.ASC)
+                        } else {
+                            // no row of its own means not read yet
+                            ownReadState(userId)
+                                .selectAll()
+                                .where {
+                                    (ChapterTable.manga inList ids) and
+                                        ((UserChapterTable.isRead eq false) or UserChapterTable.isRead.isNull())
+                                }.orderBy(ChapterTable.sourceOrder to SortOrder.ASC)
+                        }.groupBy { it[ChapterTable.manga].value }
+                    ids.map { id -> firstUnreadChaptersByMangaId[id]?.let { chapters -> ChapterType(chapters.first(), userId) } }
                 }
             }
         }

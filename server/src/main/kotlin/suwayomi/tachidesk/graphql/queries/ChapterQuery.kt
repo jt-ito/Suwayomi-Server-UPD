@@ -11,8 +11,14 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDeprecated
 import com.expediagroup.graphql.server.extensions.getValueFromDataLoader
 import graphql.schema.DataFetchingEnvironment
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.not
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.jdbc.andWhere
@@ -31,6 +37,7 @@ import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompare
 import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompareEntity
 import suwayomi.tachidesk.graphql.queries.filter.andFilterWithCompareString
 import suwayomi.tachidesk.graphql.queries.filter.applyOps
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.server.primitives.Cursor
 import suwayomi.tachidesk.graphql.server.primitives.Order
 import suwayomi.tachidesk.graphql.server.primitives.OrderBy
@@ -44,6 +51,9 @@ import suwayomi.tachidesk.graphql.types.ChapterNodeList
 import suwayomi.tachidesk.graphql.types.ChapterType
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
+import suwayomi.tachidesk.manga.model.table.UserChapterTable
+import suwayomi.tachidesk.manga.model.table.UserMangaTable
+import suwayomi.tachidesk.manga.model.table.libraryMangaIdsOf
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -112,6 +122,32 @@ class ChapterQuery {
         override val byType: SortOrder? = null,
     ) : Order<ChapterOrderBy>
 
+    /**
+     * [ChapterOrderBy] for one account: the read state of the accounts after the first is kept in user_chapter, so
+     * ordering by when something was read has to use that column.
+     */
+    private class AccountChapterOrderBy(
+        private val base: ChapterOrderBy,
+        private val ownReadState: Boolean,
+    ) : OrderBy<ChapterType> {
+        private val useOwn = ownReadState && base == ChapterOrderBy.LAST_READ_AT
+
+        override val column: Column<*> = if (useOwn) UserChapterTable.lastReadAt else base.column
+
+        override fun asCursor(type: ChapterType) = base.asCursor(type)
+
+        override fun greater(cursor: Cursor) =
+            if (useOwn) greaterNotUnique(UserChapterTable.lastReadAt, ChapterTable.id, cursor, String::toLong) else base.greater(cursor)
+
+        override fun less(cursor: Cursor) =
+            if (useOwn) lessNotUnique(UserChapterTable.lastReadAt, ChapterTable.id, cursor, String::toLong) else base.less(cursor)
+    }
+
+    private data class AccountChapterOrder(
+        override val by: AccountChapterOrderBy,
+        override val byType: SortOrder?,
+    ) : Order<AccountChapterOrderBy>
+
     data class ChapterCondition(
         val id: Int? = null,
         val url: String? = null,
@@ -151,6 +187,19 @@ class ChapterQuery {
 
             return opAnd.op
         }
+
+        fun withoutReadState() = copy(isRead = null, isBookmarked = null, lastPageRead = null, lastReadAt = null)
+
+        /** The conditions on the read state, for an account that keeps it in user_chapter (no row means not read). */
+        fun readStateOps(): List<Op<Boolean>> =
+            listOfNotNull(
+                isRead?.let { if (it) UserChapterTable.isRead eq true else (UserChapterTable.isRead eq false) or UserChapterTable.isRead.isNull() },
+                isBookmarked?.let {
+                    if (it) UserChapterTable.isBookmarked eq true else (UserChapterTable.isBookmarked eq false) or UserChapterTable.isBookmarked.isNull()
+                },
+                lastPageRead?.let { UserChapterTable.lastPageRead eq it },
+                lastReadAt?.let { UserChapterTable.lastReadAt eq it },
+            )
     }
 
     data class ChapterFilter(
@@ -196,10 +245,23 @@ class ChapterQuery {
             )
 
         fun getLibraryOp() = andFilterWithCompare(MangaTable.inLibrary, inLibrary)
+
+        fun withoutLibraryAndReadState() =
+            copy(inLibrary = null, isRead = null, isBookmarked = null, lastPageRead = null, lastReadAt = null)
+
+        /** The filters on the read state, for an account that keeps it in user_chapter. */
+        fun readStateOps(): List<Op<Boolean>> =
+            listOfNotNull(
+                andFilterWithCompare(UserChapterTable.isRead, isRead),
+                andFilterWithCompare(UserChapterTable.isBookmarked, isBookmarked),
+                andFilterWithCompare(UserChapterTable.lastPageRead, lastPageRead),
+                andFilterWithCompare(UserChapterTable.lastReadAt, lastReadAt),
+            )
     }
 
     @RequireAuth
     fun chapters(
+        dataFetchingEnvironment: DataFetchingEnvironment,
         condition: ChapterCondition? = null,
         filter: ChapterFilter? = null,
         @GraphQLDeprecated(
@@ -219,30 +281,59 @@ class ChapterQuery {
         last: Int? = null,
         offset: Int? = null,
     ): ChapterNodeList {
-        val queryResults =
+        val userId = dataFetchingEnvironment.currentUserId()
+        // the library and the read state of the first account are mirrored into the manga and chapter tables, the
+        // other accounts have their own
+        val hasOwnState = userId != 1
+
+        val (queryResults, resultsAsType) =
             transaction {
                 val res = ChapterTable.selectAll()
 
-                val libraryOp = filter?.getLibraryOp()
-                if (libraryOp != null) {
+                if (hasOwnState) {
                     res.adjustColumnSet {
-                        innerJoin(MangaTable)
+                        join(
+                            UserChapterTable,
+                            JoinType.LEFT,
+                            onColumn = ChapterTable.id,
+                            otherColumn = UserChapterTable.chapter,
+                            additionalConstraint = { UserChapterTable.user eq userId },
+                        )
                     }
-                    res.andWhere { libraryOp }
-                }
+                    filter?.inLibrary?.equalTo?.let { wanted ->
+                        res.andWhere {
+                            val library = ChapterTable.manga inSubQuery UserMangaTable.libraryMangaIdsOf(userId)
+                            if (wanted) library else not(library)
+                        }
+                    }
+                    res.applyOps(condition?.withoutReadState(), filter?.withoutLibraryAndReadState())
+                    filter?.readStateOps()?.forEach { op -> res.andWhere { op } }
+                    condition?.readStateOps()?.forEach { op -> res.andWhere { op } }
+                } else {
+                    val libraryOp = filter?.getLibraryOp()
+                    if (libraryOp != null) {
+                        res.adjustColumnSet {
+                            innerJoin(MangaTable)
+                        }
+                        res.andWhere { libraryOp }
+                    }
 
-                res.applyOps(condition, filter)
+                    res.applyOps(condition, filter)
+                }
 
                 val baseSort = listOf(ChapterOrder(ChapterOrderBy.ID, SortOrder.ASC))
                 val deprecatedSort = listOfNotNull(orderBy?.let { ChapterOrder(orderBy, orderByType) })
-                val actualSort = (order.orEmpty() + deprecatedSort + baseSort)
+                val actualSort =
+                    (order.orEmpty() + deprecatedSort + baseSort).map {
+                        AccountChapterOrder(AccountChapterOrderBy(it.by, hasOwnState), it.byType)
+                    }
 
                 val (total, firstResult, lastResult) = res.applySortAndGetPaginationInfo(actualSort, before, last, ChapterTable.id)
 
                 res.applyBeforeAfter(
                     before = before,
                     after = after,
-                    orderBy = order?.firstOrNull()?.by ?: ChapterOrderBy.ID,
+                    orderBy = AccountChapterOrderBy(order?.firstOrNull()?.by ?: ChapterOrderBy.ID, hasOwnState),
                     orderByType = order?.firstOrNull()?.byType,
                 )
 
@@ -252,12 +343,13 @@ class ChapterQuery {
                     res.limit(last)
                 }
 
-                QueryResults(total, firstResult, lastResult, res.toList())
+                val rows = res.toList()
+                // the read state of an account is looked up per chapter, which needs the transaction
+                QueryResults(total, firstResult, lastResult, rows) to rows.map { ChapterType(it, userId) }
             }
 
         val getAsCursor: (ChapterType) -> Cursor = (order?.firstOrNull()?.by ?: ChapterOrderBy.ID)::asCursor
 
-        val resultsAsType = queryResults.results.map { ChapterType(it) }
 
         return ChapterNodeList(
             resultsAsType,

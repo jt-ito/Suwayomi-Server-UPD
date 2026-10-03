@@ -1,8 +1,13 @@
 package suwayomi.tachidesk.manga.model.table
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.select
 import suwayomi.tachidesk.server.user.model.UserTable
 
 object UserMangaTable : IntIdTable("user_manga") {
@@ -29,6 +34,20 @@ data class UserMangaDataClass(
     val viewerFlags: Int?,
     val chapterFlags: Int,
 )
+
+/**
+ * The manga in the library of one account. Every account has its own library, the `inLibrary` column of the manga
+ * table only mirrors the first one.
+ */
+fun UserMangaTable.libraryMangaIdsOf(userId: Int) =
+    UserMangaTable
+        .select(UserMangaTable.manga)
+        .where { (UserMangaTable.user eq userId) and (UserMangaTable.inLibrary eq true) }
+
+/** The manga that are in the library of any account. */
+fun UserMangaTable.allLibraryMangaIds() = UserMangaTable.select(UserMangaTable.manga).where { UserMangaTable.inLibrary eq true }
+
+fun UserMangaTable.libraryOf(userId: Int): Op<Boolean> = MangaTable.id inSubQuery libraryMangaIdsOf(userId)
 
 fun UserMangaTable.toDataClass(row: ResultRow) =
     UserMangaDataClass(

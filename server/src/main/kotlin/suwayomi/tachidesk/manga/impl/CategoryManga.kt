@@ -13,9 +13,11 @@ import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.leftJoin
 import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.batchUpsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -31,6 +33,8 @@ import suwayomi.tachidesk.manga.model.table.ChapterDedup.downloadedChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterDedup.unreadChapterCount
 import suwayomi.tachidesk.manga.model.table.ChapterTable
 import suwayomi.tachidesk.manga.model.table.MangaTable
+import suwayomi.tachidesk.manga.model.table.UserMangaTable
+import suwayomi.tachidesk.manga.model.table.allLibraryMangaIds
 import suwayomi.tachidesk.manga.model.table.toDataClass
 import suwayomi.tachidesk.server.database.dbTransaction
 
@@ -99,13 +103,24 @@ object CategoryManga {
     /**
      * list of mangas that belong to a category
      */
-    fun getCategoryMangaList(categoryId: Int): List<MangaDataClass> {
+    fun getCategoryMangaList(
+        categoryId: Int,
+        inAnyLibrary: Boolean = false,
+    ): List<MangaDataClass> {
         // Some sources release the same chapter under multiple scanlators, which would
         // inflate a plain COUNT(*) — unread/download/chapter counts are computed from the
         // raw chapter rows below (via ChapterDedup) instead of as SQL aggregates, so
         // duplicate scanlator copies of the same chapter are only counted once.
         val lastReadAt = ChapterTable.lastReadAt.max().alias("last_read_at")
         val selectedColumns = MangaTable.columns + lastReadAt
+
+        // the library updater has to keep the manga of every account up to date, not only the first account's
+        val inLibrary =
+            if (inAnyLibrary) {
+                (MangaTable.inLibrary eq true) or (MangaTable.id inSubQuery UserMangaTable.allLibraryMangaIds())
+            } else {
+                MangaTable.inLibrary eq true
+            }
 
         return transaction {
             // Fetch data from the MangaTable and join with the CategoryMangaTable, if a category is specified
@@ -115,13 +130,13 @@ object CategoryManga {
                         .leftJoin(ChapterTable, { MangaTable.id }, { ChapterTable.manga })
                         .leftJoin(CategoryMangaTable)
                         .select(columns = selectedColumns)
-                        .where { (MangaTable.inLibrary eq true) and CategoryMangaTable.category.isNull() }
+                        .where { inLibrary and CategoryMangaTable.category.isNull() }
                 } else {
                     MangaTable
                         .innerJoin(CategoryMangaTable)
                         .leftJoin(ChapterTable, { MangaTable.id }, { ChapterTable.manga })
                         .select(columns = selectedColumns)
-                        .where { (MangaTable.inLibrary eq true) and (CategoryMangaTable.category eq categoryId) }
+                        .where { inLibrary and (CategoryMangaTable.category eq categoryId) }
                 }
 
             val mangaRows = query.groupBy(*MangaTable.columns.toTypedArray()).toList()

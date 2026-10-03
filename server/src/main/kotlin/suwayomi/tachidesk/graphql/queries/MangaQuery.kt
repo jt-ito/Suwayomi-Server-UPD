@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.not
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -54,6 +55,8 @@ import suwayomi.tachidesk.graphql.types.MangaType
 import suwayomi.tachidesk.manga.model.table.CategoryMangaTable
 import suwayomi.tachidesk.manga.model.table.MangaStatus
 import suwayomi.tachidesk.manga.model.table.MangaTable
+import suwayomi.tachidesk.manga.model.table.UserMangaTable
+import suwayomi.tachidesk.manga.model.table.libraryOf
 import java.util.concurrent.CompletableFuture
 
 class MangaQuery {
@@ -259,6 +262,12 @@ class MangaQuery {
         val userType = dataFetchingEnvironment.getAttribute(Attribute.TachideskUser)
         val userId = userType?.idOrNull ?: 1
 
+        // the `inLibrary` column of the manga table is the library of the first account, the others have their own
+        val hasOwnLibrary = userId != 1
+        val libraryWanted = if (hasOwnLibrary) condition?.inLibrary ?: filter?.inLibrary?.equalTo else null
+        val actualCondition = if (hasOwnLibrary) condition?.copy(inLibrary = null) else condition
+        val actualFilter = if (hasOwnLibrary) filter?.copy(inLibrary = null) else filter
+
         val (queryResults, resultsAsType) =
             transaction {
                 val mangaIdsQuery =
@@ -266,29 +275,17 @@ class MangaQuery {
                         .leftJoin(CategoryMangaTable)
                         .select(MangaTable.id)
                         .withDistinct()
-                        .applyOps(condition, filter)
+                        .applyOps(actualCondition, actualFilter)
 
                 val res =
-                    if (condition?.categoryIds != null || filter?.isFilteringForCategories() == true) {
+                    if (actualCondition?.categoryIds != null || actualFilter?.isFilteringForCategories() == true) {
                         MangaTable.selectAll().where { MangaTable.id inSubQuery mangaIdsQuery }
                     } else {
-                        MangaTable.selectAll().applyOps(condition, filter)
+                        MangaTable.selectAll().applyOps(actualCondition, actualFilter)
                     }
 
-                // If filtering for library and user is not admin (or user has personal library entries)
-                if (condition?.inLibrary == true || filter?.inLibrary?.equalTo == true) {
-                    if (userId != 1) {
-                        res.andWhere {
-                            MangaTable.id inSubQuery (
-                                suwayomi.tachidesk.manga.model.table.UserMangaTable
-                                    .select(suwayomi.tachidesk.manga.model.table.UserMangaTable.manga)
-                                    .where {
-                                        (suwayomi.tachidesk.manga.model.table.UserMangaTable.user eq userId) and
-                                            (suwayomi.tachidesk.manga.model.table.UserMangaTable.inLibrary eq true)
-                                    }
-                            )
-                        }
-                    }
+                if (libraryWanted != null) {
+                    res.andWhere { if (libraryWanted) UserMangaTable.libraryOf(userId) else not(UserMangaTable.libraryOf(userId)) }
                 }
 
                 val baseSort = listOf(MangaOrder(MangaOrderBy.ID, SortOrder.ASC))

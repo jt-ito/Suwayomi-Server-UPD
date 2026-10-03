@@ -21,6 +21,7 @@ import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import suwayomi.tachidesk.graphql.server.currentUserId
 import suwayomi.tachidesk.graphql.types.MangaNodeList
 import suwayomi.tachidesk.graphql.types.MangaNodeList.Companion.toNodeList
 import suwayomi.tachidesk.graphql.types.MangaType
@@ -113,6 +114,7 @@ class MangaForSourceDataLoader : KotlinDataLoader<Long, MangaNodeList> {
 
     override fun getDataLoader(graphQLContext: GraphQLContext): DataLoader<Long, MangaNodeList> =
         DataLoaderFactory.newDataLoader<Long, MangaNodeList> { ids ->
+            val userId = graphQLContext.currentUserId()
             future {
                 transaction {
                     addLogger(Slf4jSqlDebugLogger)
@@ -120,7 +122,7 @@ class MangaForSourceDataLoader : KotlinDataLoader<Long, MangaNodeList> {
                         MangaTable
                             .selectAll()
                             .where { MangaTable.sourceReference inList ids }
-                            .map { MangaType(it) }
+                            .map { MangaType(it, userId) }
                             .groupBy { it.sourceId }
                     ids.map { (mangaBySourceId[it] ?: emptyList()).toNodeList() }
                 }
