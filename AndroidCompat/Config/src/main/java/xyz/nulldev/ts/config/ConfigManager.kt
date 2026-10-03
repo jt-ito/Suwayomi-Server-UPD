@@ -112,6 +112,14 @@ open class ConfigManager {
      * Docker-style environment variables for the settings people most often pin in a compose file. They win over
      * server.conf (the usual container behavior) and lose against `-D` overrides.
      */
+    /**
+     * Environment variables win over server.conf. Applying the file again (after it was rewritten) would put its values
+     * on top of them, so the environment goes back on top.
+     */
+    private fun reapplyEnvironment() {
+        internalConfig = environmentConfig().withFallback(internalConfig).resolve()
+    }
+
     private fun environmentConfig(): Config =
         ENV_SETTINGS.entries.fold(ConfigFactory.empty()) { config, (env, setting) ->
             val value = System.getenv(env)?.trim()?.takeIf { it.isNotEmpty() } ?: return@fold config
@@ -208,6 +216,7 @@ open class ConfigManager {
 
         userConfigFile.writeText(serverConfigDoc.render())
         getUserConfig().entrySet().forEach { internalConfig = internalConfig.withValue(it.key, it.value) }
+        reapplyEnvironment()
 
         return serverConfigDoc
     }
@@ -255,6 +264,7 @@ open class ConfigManager {
 
         userConfigFile.writeText(newUserConfigDoc.render())
         getUserConfig().entrySet().forEach { internalConfig = internalConfig.withValue(it.key, it.value) }
+        reapplyEnvironment()
     }
 
     fun getRedactedConfig(nonPrivacySafeKeys: List<String>): Config {
