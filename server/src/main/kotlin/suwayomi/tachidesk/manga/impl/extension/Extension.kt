@@ -60,9 +60,11 @@ import suwayomi.tachidesk.server.database.dbTransaction
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -84,6 +86,8 @@ import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.outputStream
 import kotlin.io.path.relativeTo
 import kotlin.io.path.walk
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
 
 object Extension {
     private val logger = KotlinLogging.logger {}
@@ -685,20 +689,45 @@ object Extension {
 
     private val network: NetworkHelper by injectLazy()
 
+    private const val EXTENSION_DOWNLOAD_ATTEMPTS = 3
+
+    /**
+     * Downloads an extension file. The shared client waits 30 seconds for the response headers, which is not enough when
+     * the host is slow or a connection has stalled (a shared HTTP/2 connection, a throttled VPN address): the install
+     * used to fail on the first timeout. This waits longer and retries on a fresh connection before giving up.
+     */
     private suspend fun downloadExtension(
         url: String,
         savePath: Path,
     ) {
-        val response =
-            network.client
-                .newCall(
-                    GET(url, cache = CacheControl.FORCE_NETWORK),
-                ).await()
+        val client = network.client.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()
 
-        savePath.createParentDirectories()
-        response.body.byteStream().use {
-            savePath.outputStream().buffered().use { out ->
-                it.copyTo(out)
+        for (attempt in 1..EXTENSION_DOWNLOAD_ATTEMPTS) {
+            try {
+                val response =
+                    client
+                        .newCall(
+                            GET(url, cache = CacheControl.FORCE_NETWORK),
+                        ).await()
+
+                savePath.createParentDirectories()
+                response.body.byteStream().use {
+                    savePath.outputStream().buffered().use { out ->
+                        it.copyTo(out)
+                    }
+                }
+                return
+            } catch (e: IOException) {
+                if (attempt == EXTENSION_DOWNLOAD_ATTEMPTS) {
+                    throw IOException(
+                        "Could not download the extension from $url after $EXTENSION_DOWNLOAD_ATTEMPTS attempts: ${e.message}",
+                        e,
+                    )
+                }
+                logger.warn { "Downloading $url failed (attempt $attempt of $EXTENSION_DOWNLOAD_ATTEMPTS): ${e.message}, retrying" }
+                // a stalled shared connection is the usual cause of a timeout, so start over on a new one
+                client.connectionPool.evictAll()
+                delay((attempt * 2).seconds)
             }
         }
     }
