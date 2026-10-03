@@ -53,6 +53,11 @@ if [ "$(printf '%s' "${DATABASE_TYPE:-}" | tr 'a-z' 'A-Z')" = "H2" ] && [ -d /da
     echo "WARNING: To keep that library, use DATABASE=postgres, or move it with the migration page (/database)." >&2
 fi
 
+# Chromium (the WebView) locks its profile with the hostname of the container that used it, and a recreated container has
+# a new hostname, so the old lock would stop the WebView from starting. Only one container uses a data folder, so the
+# lock files left behind are stale.
+find /data/cache -maxdepth 4 \( -name SingletonLock -o -name SingletonCookie -o -name SingletonSocket \) -delete 2>/dev/null || true
+
 # The WebUI that was built into the image replaces the copy in the data volume on every start, so an image update
 # also updates the interface (the volume would otherwise keep serving an old one).
 rm -rf /data/webUI
