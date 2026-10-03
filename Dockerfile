@@ -41,10 +41,11 @@ RUN --mount=type=cache,target=/root/.gradle \
 # ---------------------------------------------------------------- runtime
 FROM eclipse-temurin:21-jre-noble
 
-# The libraries are for the WebView (a Chromium that runs on the server); the server works without it if they are missing.
+# The libraries and xvfb (a virtual display) are for the WebView, a Chromium that runs on the server and refuses to start
+# without a display. The server works without the WebView if they are missing.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        curl tzdata ca-certificates \
+        curl tzdata ca-certificates xvfb \
         libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 libgbm1 \
         libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libxkbcommon0 libx11-6 libxcb1 libxext6 libxi6 libxtst6 \
         libpango-1.0-0 libcairo2 libasound2t64 libdbus-1-3 libglib2.0-0t64 libgtk-3-0t64 \
@@ -54,6 +55,7 @@ RUN apt-get update \
     && groupadd -g 1000 tsundoku \
     && useradd -u 1000 -g 1000 -m -d /home/tsundoku -s /usr/sbin/nologin tsundoku \
     && mkdir -p /data /opt/tsundoku \
+    && mkdir -m 1777 /tmp/.X11-unix \
     && chown tsundoku:tsundoku /data
 
 COPY --from=server --chown=tsundoku:tsundoku /out/tsundoku.jar /opt/tsundoku/tsundoku.jar

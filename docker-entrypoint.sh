@@ -58,6 +58,15 @@ fi
 # lock files left behind are stale.
 find /data/cache -maxdepth 4 \( -name SingletonLock -o -name SingletonCookie -o -name SingletonSocket \) -delete 2>/dev/null || true
 
+# The WebView's Chromium will not start without a display ("Missing X server or $DISPLAY"), and a container has none, so
+# give it a virtual one. The lock files are left over when a stopped container is started again.
+if [ "$(printf '%s' "${KCEF_ENABLED:-true}" | tr 'A-Z' 'a-z')" != "false" ] && command -v Xvfb >/dev/null 2>&1; then
+    rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
+    Xvfb :99 -screen 0 1280x800x24 -nolisten tcp >/dev/null 2>&1 &
+    export DISPLAY=:99
+    for _ in 1 2 3 4 5 6 7 8 9 10; do [ -S /tmp/.X11-unix/X99 ] && break; sleep 0.3; done
+fi
+
 # The WebUI that was built into the image replaces the copy in the data volume on every start, so an image update
 # also updates the interface (the volume would otherwise keep serving an old one).
 rm -rf /data/webUI
