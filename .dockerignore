@@ -12,3 +12,6 @@ AGENTS.md
 HANDOFF.md
 skills
 .claude
+
+# a local, git-ignored copy of the upstream WebUI that would end up inside the jar
+server/src/main/resources/WebUI.zip
