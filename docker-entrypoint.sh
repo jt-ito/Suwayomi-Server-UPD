@@ -33,6 +33,10 @@ case "$(printf '%s' "${DATABASE:-}" | tr 'A-Z' 'a-z')" in
         : "${DATABASE_TYPE:=POSTGRESQL}"
         : "${USE_EMBEDDED_POSTGRES:=true}"
         export DATABASE_TYPE USE_EMBEDDED_POSTGRES
+        if [ -f /data/database.mv.db ] && [ ! -d /data/postgres-data ]; then
+            echo "WARNING: /data already holds an H2 library (database.mv.db) but DATABASE=postgres starts an empty PostgreSQL." >&2
+            echo "WARNING: To keep that library, start with DATABASE=h2 and use the migration page (/database) to move it." >&2
+        fi
         ;;
     external)
         : "${DATABASE_TYPE:=POSTGRESQL}"
@@ -44,17 +48,6 @@ case "$(printf '%s' "${DATABASE:-}" | tr 'A-Z' 'a-z')" in
         exit 1
         ;;
 esac
-# The built-in PostgreSQL starts empty. If the folder already holds a library in H2, starting on PostgreSQL would show an
-# empty library (the H2 file stays untouched, but it would look as if everything was gone), so refuse unless asked to.
-# This covers DATABASE=postgres as well as DATABASE_TYPE=POSTGRESQL with USE_EMBEDDED_POSTGRES=true.
-if [ "$(printf '%s' "${DATABASE_TYPE:-}" | tr 'a-z' 'A-Z')" = "POSTGRESQL" ]     && [ "$(printf '%s' "${USE_EMBEDDED_POSTGRES:-}" | tr 'A-Z' 'a-z')" = "true" ]     && [ -f /data/database.mv.db ] && [ ! -d /data/postgres-data ]; then
-    echo "ERROR: /data already holds a library in H2 (database.mv.db), and the built-in PostgreSQL would start empty." >&2
-    echo "ERROR: To keep your library: start without DATABASE / DATABASE_TYPE / USE_EMBEDDED_POSTGRES (H2), then open /database and migrate." >&2
-    echo "ERROR: To start with an empty PostgreSQL anyway (the H2 file is kept), set DATABASE_ALLOW_EMPTY=true." >&2
-    if [ "$(printf '%s' "${DATABASE_ALLOW_EMPTY:-}" | tr 'A-Z' 'a-z')" != "true" ]; then
-        exit 1
-    fi
-fi
 if [ "$(printf '%s' "${DATABASE_TYPE:-}" | tr 'a-z' 'A-Z')" = "H2" ] && [ -d /data/postgres-data ] && [ ! -f /data/database.mv.db ]; then
     echo "WARNING: /data holds a PostgreSQL library (postgres-data) but the H2 database is selected, which starts empty." >&2
     echo "WARNING: To keep that library, use DATABASE=postgres, or move it with the migration page (/database)." >&2

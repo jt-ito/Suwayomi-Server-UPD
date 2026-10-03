@@ -138,7 +138,7 @@ The default is the embedded **H2** file database, as in Suwayomi. tsundoku can a
 - **Migration page.** Open `/database` (also linked from Settings > Server > Database). It shows which engine is active and walks you through switching **from H2 to PostgreSQL and back**, with a confirmation dialog and an automatic backup first.
 - **External PostgreSQL** works as before: set `DATABASE_TYPE=POSTGRESQL` and the `DATABASE_*` variables.
 > [!WARNING]
-> **Choose the built-in PostgreSQL on a new data folder.** It starts empty. Switching an existing H2 library over with `DATABASE=postgres` (or `DATABASE_TYPE=POSTGRESQL` with `USE_EMBEDDED_POSTGRES=true`) would show an empty library, so the Docker image **refuses to start** in that case and says so. Your H2 file is never deleted. To move an existing library, start on H2, open `/database` and migrate there. `DATABASE_ALLOW_EMPTY=true` starts an empty PostgreSQL anyway.
+> **Choose the built-in PostgreSQL on a new data folder.** It starts empty. Switching an existing H2 library over with `DATABASE=postgres` (or `DATABASE_TYPE=POSTGRESQL` with `USE_EMBEDDED_POSTGRES=true`) would **show an empty library**. Nothing stops it; only the `DATABASE=postgres` shortcut prints a warning in the container log, the two explicit variables do not. Your H2 file is not deleted, so removing those variables brings the library back. To move an existing library, start on H2, open `/database` and migrate there.
 
 - **Choosing the engine in Docker.** `DATABASE=h2` (the default), `DATABASE=postgres` (the built-in PostgreSQL) or `DATABASE=external` picks the engine from the first start, so a new install never has to be migrated. It only fills in `DATABASE_TYPE` and `USE_EMBEDDED_POSTGRES` when you have not set them. Changing it later does not move data: if the volume already holds a library in the other engine the container prints a warning (the new engine would start empty), and the migration page moves the data.
 
@@ -181,7 +181,7 @@ For containers, environment variables set the matching setting and **win over `s
 | Downloads and sources | `DOWNLOAD_AS_CBZ`, `DOWNLOAD_CONVERSIONS`, `EXTENSION_STORES`, `MAX_SOURCES_IN_PARALLEL` |
 | Updates and backups | `UPDATE_INTERVAL`, `BACKUP_TIME`, `BACKUP_INTERVAL`, `BACKUP_TTL`, `AUTO_BACKUP_INCLUDE_MANGA`, `AUTO_BACKUP_INCLUDE_CATEGORIES`, `AUTO_BACKUP_INCLUDE_CHAPTERS`, `AUTO_BACKUP_INCLUDE_TRACKING`, `AUTO_BACKUP_INCLUDE_HISTORY`, `AUTO_BACKUP_INCLUDE_CLIENT_DATA`, `AUTO_BACKUP_INCLUDE_SERVER_SETTINGS` |
 | FlareSolverr | `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `FLARESOLVERR_TIMEOUT`, `FLARESOLVERR_SESSION_NAME`, `FLARESOLVERR_SESSION_TTL`, `FLARESOLVERR_RESPONSE_AS_FALLBACK` |
-| Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_ALLOW_EMPTY` (Docker only), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
+| Database | `DATABASE` (Docker only: `h2`, `postgres`, `external`), `DATABASE_TYPE`, `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `USE_EMBEDDED_POSTGRES`, `USE_HIKARI_CONNECTION_POOL` |
 | WebView | `KCEF_ENABLED` |
 
 > [!NOTE]
@@ -209,7 +209,7 @@ services:
       - AUTH_USERNAME=owner
       - AUTH_PASSWORD=change-me-please           # at least 8 characters
       # Database: the PostgreSQL that is built into the image, used from the very first start.
-      # Only for a NEW data folder: on a folder that already holds an H2 library the container refuses to start
+      # Only for a NEW data folder: on a folder that already holds an H2 library this starts an EMPTY database
       # (migrate that one on the /database page instead). DATABASE=postgres is the short form of these two lines.
       - DATABASE_TYPE=POSTGRESQL
       - USE_EMBEDDED_POSTGRES=true
@@ -264,7 +264,7 @@ Switching only the image is **not enough**. These settings of your existing comp
 | Volume order | downloads **first** | does not matter |
 | `WEBUI_FLAVOR` | sometimes set | remove it; the image serves the tsundoku-WebUI by itself |
 
-Keep the same host folders on the left of each volume line, so your library and downloads are picked up. Stay on H2 for now: do not add `DATABASE=postgres` (or the two PostgreSQL variables) to this folder, the container would refuse to start. To switch to PostgreSQL later, open `/database` and migrate. Everything else carries over: `TZ`, `PUID`, `PGID`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `network_mode`, `depends_on` and the other variables work with the same names.
+Keep the same host folders on the left of each volume line, so your library and downloads are picked up. Stay on H2 for now: do not add `DATABASE=postgres` (or the two PostgreSQL variables) to this folder: it would start an empty PostgreSQL and your library would look gone. To switch to PostgreSQL later, open `/database` and migrate. Everything else carries over: `TZ`, `PUID`, `PGID`, `AUTH_MODE`, `AUTH_USERNAME`, `AUTH_PASSWORD`, `FLARESOLVERR_ENABLED`, `FLARESOLVERR_URL`, `network_mode`, `depends_on` and the other variables work with the same names.
 
 ```yaml
 services:
