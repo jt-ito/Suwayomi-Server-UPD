@@ -117,27 +117,10 @@ object DatabaseMigrationService {
         )
 
     // the same tables, by their actual SQL name - used to resync each engine's own auto-increment/sequence
-    // bookkeeping after a raw data copy, so rows written by the app afterwards don't collide with copied ids
-    private val SEQUENCE_TABLE_NAMES: List<String> =
-        listOf(
-            "user_account",
-            "category",
-            "extension_store",
-            "extension",
-            "global_meta",
-            "category_meta",
-            "source_meta",
-            "manga",
-            "category_manga",
-            "manga_meta",
-            "chapter",
-            "chapter_meta",
-            "page",
-            "track_search",
-            "track_record",
-            "user_manga",
-            "user_chapter",
-        )
+    // bookkeeping after a raw data copy, so rows written by the app afterwards don't collide with copied ids.
+    // (A hand written list of snake_case names used to be here, most of which are not the real table names, so the
+    // counters of those tables were never resynced.)
+    private val SEQUENCE_TABLE_NAMES: List<String> = TABLES_TO_MIGRATE.filter { it !== SourceTable }.map { it.tableName }
 
     fun getDatabaseStats(): DatabaseStats {
         val currentType = serverConfig.databaseType.value.name
